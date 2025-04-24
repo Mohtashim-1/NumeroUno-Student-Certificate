@@ -5,7 +5,7 @@ frappe.pages['student-certificate'].on_page_load = function(wrapper) {
         single_column: true
     });
 
-    // Filter inputs + table placeholder
+    // Filter inputs + buttons + table container
     const filter_section = `
         <div class="mb-3">
             <div class="row">
@@ -14,12 +14,18 @@ frappe.pages['student-certificate'].on_page_load = function(wrapper) {
                 <div class="col-md-3"><input type="text" id="filter-student" class="form-control" placeholder="Filter by Student"></div>
                 <div class="col-md-3"><input type="text" id="filter-customer" class="form-control" placeholder="Filter by Customer"></div>
             </div>
+            <div class="row mt-2">
+                <div class="col-md-12 text-right">
+                    <button class="btn btn-success btn-sm" id="download-selected">Download Selected PDFs</button>
+                </div>
+            </div>
         </div>
         <div id="certificate-table"></div>
     `;
 
     $(wrapper).find('.layout-main-section').html(filter_section);
 
+    // Get filter values from inputs
     function get_filter_values() {
         return {
             student: $('#filter-student').val(),
@@ -29,6 +35,7 @@ frappe.pages['student-certificate'].on_page_load = function(wrapper) {
         };
     }
 
+    // Fetch and render certificates
     function fetch_certificates() {
         frappe.call({
             method: 'student_certificates.student_certificates.page.student_certificate.student_certificate.get_certificates',
@@ -39,6 +46,7 @@ frappe.pages['student-certificate'].on_page_load = function(wrapper) {
                         <table class="table table-bordered">
                             <thead>
                                 <tr>
+                                    <th><input type="checkbox" id="select-all"></th>
                                     <th>Certificate #</th>
                                     <th>Program</th>
                                     <th>Student</th>
@@ -52,6 +60,7 @@ frappe.pages['student-certificate'].on_page_load = function(wrapper) {
                             <tbody>
                                 ${r.message.map(row => `
                                     <tr>
+                                        <td><input type="checkbox" class="select-cert" value="${row.name}"></td>
                                         <td>${row.name}</td>
                                         <td>${row.program}</td>
                                         <td>${row.student || '-'}</td>
@@ -83,5 +92,26 @@ frappe.pages['student-certificate'].on_page_load = function(wrapper) {
     // Real-time filtering
     $('#filter-student, #filter-program, #filter-customer, #filter-certificate').on('keyup', function() {
         fetch_certificates();
+    });
+
+    // Select all checkboxes
+    $(wrapper).on('change', '#select-all', function() {
+        $('.select-cert').prop('checked', $(this).is(':checked'));
+    });
+
+    // Download selected PDFs
+    $(wrapper).on('click', '#download-selected', function() {
+        const selected = $('.select-cert:checked').map(function() {
+            return $(this).val();
+        }).get();
+
+        if (!selected.length) {
+            frappe.msgprint("Please select at least one certificate.");
+            return;
+        }
+
+        const url = `/api/method/frappe.utils.print_format.download_multi_pdf?doctype=Assessment%20Result&name=${encodeURIComponent(JSON.stringify(selected))}&format=Assessment%20Certificate&no_letterhead=0&letterhead=Letter%20Head%20New&options=${encodeURIComponent(JSON.stringify({ "page-size": "A4" }))}`;
+
+        window.open(url, '_blank');
     });
 };
