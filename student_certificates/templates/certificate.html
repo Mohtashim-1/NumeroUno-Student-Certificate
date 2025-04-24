@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <style>
+    body {
+      font-family: "Helvetica", sans-serif;
+      margin: 0;
+      padding: 0;
+    }
+
+    .container {
+      position: relative;
+      padding: 100px 60px;
+      text-align: center;
+    }
+
+    .certificate-bg {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      z-index: -1;
+    }
+
+    table {
+      margin: 40px auto;
+      font-size: 12px;
+    }
+
+    td {
+      padding: 4px 8px;
+      vertical-align: top;
+    }
+
+    td:first-child {
+      text-align: right;
+    }
+
+    .signature {
+      margin-top: 80px;
+      font-size: 14px;
+      text-align: right;
+      padding-right: 80px;
+    }
+
+    .instructor {
+      margin-top: 40px;
+      font-size: 14px;
+      text-align: left;
+      padding-left: 80px;
+    }
+  </style>
+</head>
+<body>
+
+<div class="container">
+
+  <!-- Background Image -->
+  <img class="certificate-bg" src="{{ frappe.request.host_url }}assets/student_certificates/images/certificate.jpg" />
+
+  <h1>
+    {% if frappe.db.get_value("Student", doc.student, "custom_full_name_english") %}
+      {{ frappe.db.get_value("Student", doc.student, "custom_full_name_english") }}
+    {% else %}
+      {{ doc.student_name }}
+    {% endif %}
+  </h1>
+
+  <p>has successfully attended/passed</p>
+  <h2>{{ doc.course }}</h2>
+
+  {% if doc.custom_level %}
+    <p>{{ doc.custom_level }}</p>
+  {% endif %}
+
+  <table>
+    <tr>
+      <td><b>Course Date:</b></td>
+      <td>
+        {% if doc.course_start_date and doc.course_end_date %}
+          {% if doc.course_start_date != doc.course_end_date %}
+            {{ frappe.utils.get_datetime(doc.course_start_date).strftime("%d-%m-%Y") }} TO
+            {{ frappe.utils.get_datetime(doc.course_end_date).strftime("%d-%m-%Y") }}
+          {% else %}
+            {{ frappe.utils.get_datetime(doc.course_start_date).strftime("%d-%m-%Y") }}
+          {% endif %}
+        {% else %}
+          N/A
+        {% endif %}
+      </td>
+    </tr>
+    <tr>
+      <td><b>Certificate No:</b></td>
+      <td>{{ doc.name }}</td>
+    </tr>
+    <tr>
+      <td><b>Date of Expiry:</b></td>
+      <td>
+        {% if doc.validity_period == "NA" or not doc.validity_period %}
+          N/A
+        {% else %}
+          {% if doc.certificate_validity_date %}
+            {{ frappe.utils.get_datetime(doc.certificate_validity_date).strftime("%d-%m-%Y") }}
+          {% else %}
+            N/A
+          {% endif %}
+        {% endif %}
+      </td>
+    </tr>
+  </table>
+
+  <div class="instructor">
+    {% set instructor = frappe.db.get_value("Student Group Instructor", {"parent": doc.student_group}, "instructor_name") %}
+    {% if instructor %}
+      <strong>{{ instructor }}</strong>
+    {% endif %}
+  </div>
+
+  <div class="signature">
+    <strong>Academic Director</strong>
+  </div>
+
+</div>
+
+</body>
+</html>
