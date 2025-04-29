@@ -5,7 +5,6 @@ frappe.pages['student-attendance1'].on_page_load = function (wrapper) {
 		single_column: true
 	});
 
-	// HTML Table
 	$(`
 		<div class="mt-3">
 			<h4>Pending Attendance Records</h4>
@@ -22,7 +21,7 @@ frappe.pages['student-attendance1'].on_page_load = function (wrapper) {
 					</tr>
 				</thead>
 				<tbody id="attendance-table-body">
-					<!-- Rows will be added here -->
+					<!-- Rows will be rendered here -->
 				</tbody>
 			</table>
 		</div>
@@ -30,7 +29,6 @@ frappe.pages['student-attendance1'].on_page_load = function (wrapper) {
 
 	load_pending_attendance();
 
-	// Main function to load data
 	function load_pending_attendance() {
 		frappe.call({
 			method: "frappe.client.get_list",
@@ -43,9 +41,9 @@ frappe.pages['student-attendance1'].on_page_load = function (wrapper) {
 				limit_page_length: 100
 			},
 			callback: function (r) {
-				let tableBody = $("#attendance-table-body").empty();
+				const tableBody = $("#attendance-table-body").empty();
 				r.message.forEach(doc => {
-					let isUnsigned = !doc.custom_student_signature;
+					const isUnsigned = !doc.custom_student_signature;
 
 					let signatureCell = '';
 					let actionCell = '';
@@ -64,7 +62,7 @@ frappe.pages['student-attendance1'].on_page_load = function (wrapper) {
 						actionCell = `<span class="badge bg-success">Submitted</span>`;
 					}
 
-					let row = `
+					const row = `
 						<tr>
 							<td>${doc.name}</td>
 							<td>${doc.student}</td>
@@ -77,13 +75,11 @@ frappe.pages['student-attendance1'].on_page_load = function (wrapper) {
 					tableBody.append(row);
 				});
 
-				// Bind canvas and buttons
 				init_canvas_and_buttons(r.message);
 			}
 		});
 	}
 
-	// Draw signature + handle button events
 	function init_canvas_and_buttons(records) {
 		records.forEach(doc => {
 			if (!doc.custom_student_signature) {
@@ -107,22 +103,35 @@ frappe.pages['student-attendance1'].on_page_load = function (wrapper) {
 				canvas.addEventListener('mouseup', () => drawing = false);
 				canvas.addEventListener('mouseleave', () => drawing = false);
 
-				// Clear button
 				$(`.clear-btn[data-name="${doc.name}"]`).click(function () {
 					ctx.clearRect(0, 0, canvas.width, canvas.height);
 				});
 			}
 		});
 
-		// Submit signature
+		// Click handler for "Sign & Submit"
 		$('.inline-sign-btn').off('click').on('click', function () {
 			const name = $(this).data('name');
 			const canvas = document.getElementById(`sign-${name}`);
-			if (!canvas) return frappe.msgprint("Canvas not found!");
+			if (!canvas) return frappe.msgprint("Signature area not found!");
+
+			// ✅ Validate if canvas is actually blank
+			const isCanvasBlank = (canvas) => {
+				const ctx = canvas.getContext('2d');
+				const pixelBuffer = new Uint32Array(
+					ctx.getImageData(0, 0, canvas.width, canvas.height).data.buffer
+				);
+				return !pixelBuffer.some(color => color !== 0);
+			};
+
+			if (isCanvasBlank(canvas)) {
+				frappe.msgprint("Please draw your signature before submitting.");
+				return;
+			}
 
 			const signature = canvas.toDataURL();
 
-			// 1. Save signature
+			// Step 1: Save the signature
 			frappe.call({
 				method: "frappe.client.set_value",
 				args: {
@@ -133,18 +142,30 @@ frappe.pages['student-attendance1'].on_page_load = function (wrapper) {
 					}
 				},
 				callback: function () {
-					// 2. Submit doc
+					// Step 2: Fetch full doc and submit
 					frappe.call({
-						method: "frappe.client.submit",
+						method: "frappe.client.get",
 						args: {
-							doc: {
-								doctype: "Student Attendance",
-								name: name
-							}
+							doctype: "Student Attendance",
+							name: name
 						},
-						callback: function () {
-							frappe.msgprint("Signed and Submitted!");
-							load_pending_attendance(); // reload
+						callback: function (res) {
+							const full_doc = res.message;
+
+							frappe.call({
+								method: "frappe.client.submit",
+								args: {
+									doc: full_doc
+								},
+								callback: function () {
+									frappe.msgprint("Signed and submitted successfully!");
+									load_pending_attendance();
+								},
+								error: function (err) {
+									frappe.msgprint("Failed to submit the document. Please try again.");
+									console.error(err);
+								}
+							});
 						}
 					});
 				}
