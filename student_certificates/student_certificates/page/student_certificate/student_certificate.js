@@ -65,6 +65,7 @@ frappe.pages['student-certificate'].on_page_load = function(wrapper) {
                                         <td>${row.program}</td>
                                         <td>${row.student || '-'}</td>
                                         <td>${row.custom_customer || '-'}</td>
+                                        <td>${row.custom_customer || '-'}</td>
                                         <td>${row.maximum_score}</td>
                                         <td>${row.total_score}</td>
                                         <td>${row.grade}</td>
