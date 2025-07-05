@@ -43,11 +43,6 @@ def create_renewal_payment_request(certificate_name):
         "payment_url": session.url,
         "amount": amount
     }
-
-
-@frappe.whitelist()
-
-
 @frappe.whitelist()
 def create_renewal_payment_request(certificate_name):
     # Fetch certificate info
@@ -68,7 +63,7 @@ def create_renewal_payment_request(certificate_name):
     redirect_url = get_url("/app/student-certificate")
 
     try:
-        # Create Stripe Checkout Session
+        # ✅ FIX: Added client_reference_id so webhook can use it
         session = stripe.checkout.Session.create(
             payment_method_types=["card"],
             line_items=[{
@@ -83,6 +78,7 @@ def create_renewal_payment_request(certificate_name):
                 "quantity": 1,
             }],
             mode="payment",
+            client_reference_id=certificate.name,  # ✅ This is required for the webhook to identify the certificate
             success_url=redirect_url + "?payment=success&certificate=" + certificate.name,
             cancel_url=redirect_url + "?payment=cancelled&certificate=" + certificate.name,
             metadata={
@@ -92,7 +88,7 @@ def create_renewal_payment_request(certificate_name):
             }
         )
 
-        # Optionally store payment_id
+        # Optionally store session ID and set initial status
         certificate.db_set("custom_renewal_payment_id", session.id)
         certificate.db_set("custom_renewal_status", "Pending Payment")
 
@@ -108,8 +104,7 @@ def create_renewal_payment_request(certificate_name):
             "status": "failed",
             "message": str(e.user_message or e)
         }
-    
-    
+
 @frappe.whitelist(allow_guest=True)
 def payment_success(session_id, certificate_name):
     import stripe
@@ -161,6 +156,46 @@ def get_certificate_renewal_status(certificate_name):
     except Exception as e:
         frappe.log_error(f"Failed to get renewal status: {str(e)}")
         return {"status": "Error", "message": str(e)}
+
+@frappe.whitelist(allow_guest=True)
+def handle_stripe_webhook():
+    import stripe
+
+    payload = frappe.request.get_data()
+    sig_header = frappe.request.headers.get('Stripe-Signature')
+
+    stripe_settings = frappe.get_doc("Stripe Settings", "Stripe")
+    stripe.api_key = stripe_settings.secret_key
+    webhook_secret = stripe_settings.custom_webhook_secret
+
+    try:
+        event = stripe.Webhook.construct_event(payload, sig_header, webhook_secret)
+    except ValueError as e:
+        frappe.log_error(str(e), "Stripe Webhook: Invalid Payload")
+        return
+    except stripe.error.SignatureVerificationError as e:
+        frappe.log_error(str(e), "Stripe Webhook: Invalid Signature")
+        return
+
+    if event['type'] == 'checkout.session.completed':
+        session = event['data']['object']
+        ref_docname = session.get('client_reference_id')
+
+        if ref_docname:
+            try:
+                # Only fetch necessary fields, not full document
+                frappe.db.set_value("Assessment Result", ref_docname, {
+                    "custom_renewal_status": "Renewed",
+                    "custom_renewal_payment_id": session.get("payment_intent"),
+                    "custom_renewal_date": frappe.utils.now()
+                })
+
+                send_renewal_success_notification(ref_docname)
+                frappe.db.commit()
+
+            except Exception as e:
+                frappe.log_error(str(e), "Stripe Webhook Processing Failed")
+
 
 @frappe.whitelist()
 def check_certificate_expiry(certificate_name):
