@@ -1,0 +1,47 @@
+{% extends "payments/templates/pages/stripe_checkout.html" %}
+
+{% block script %}
+{{ super() }}
+<script>
+// Override the Stripe initialization with hardcoded key
+var stripe = Stripe("pk_test_51RhUOz2NHM2ZzUvkTK2uWbSo2xNRNtPRkPgWorhGM3t9D1HeaUqxuBfPv31k8uoeFZKZfGOqZnucTTdTaMCXt0ja00h88kaL8q");
+
+// Test Card Helper for Development
+(function() {
+    'use strict';
+    
+    // Check if we're in development mode
+    function isDevelopment() {
+        return window.location.hostname === 'localhost' || 
+               window.location.hostname === '127.0.0.1' || 
+               window.location.hostname.indexOf('local') !== -1;
+    }
+    
+    // Add test card information to the page
+    function addTestCardInfo() {
+        setTimeout(function() {
+            var paymentForm = document.getElementById('payment-form');
+            if (paymentForm) {
+                var testCardDiv = document.createElement('div');
+                testCardDiv.className = 'alert alert-info';
+                testCardDiv.style.cssText = 'background-color: #d1ecf1; border-color: #bee5eb; color: #0c5460; padding: 12px; border-radius: 4px; margin-bottom: 20px;';
+                testCardDiv.innerHTML = '<strong>Test Card Details:</strong><br>' +
+                                      'Card Number: <code>4242 4242 4242 4242</code><br>' +
+                                      'Expiry: <code>12/34</code><br>' +
+                                      'CVC: <code>123</code>';
+                
+                paymentForm.parentNode.insertBefore(testCardDiv, paymentForm);
+            }
+        }, 1000);
+    }
+    
+    if (isDevelopment()) {
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', addTestCardInfo);
+        } else {
+            addTestCardInfo();
+        }
+    }
+})();
+</script>
+{% endblock %} 

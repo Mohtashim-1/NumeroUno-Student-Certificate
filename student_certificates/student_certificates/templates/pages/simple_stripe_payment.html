@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Stripe Test Payment</title>
+    <script src="https://js.stripe.com/v3/"></script>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 40px; }
+        .container { max-width: 400px; margin: 0 auto; }
+        .alert { background: #d1ecf1; color: #0c5460; padding: 10px; border-radius: 4px; margin-bottom: 20px; }
+        #card-element { padding: 10px; border: 1px solid #ddd; border-radius: 4px; }
+        .error { color: red; }
+        .success { color: green; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h2>Stripe Test Payment</h2>
+    <div class="alert">
+        <b>Test Card:</b> 4242 4242 4242 4242<br>
+        <b>Expiry:</b> 12/34<br>
+        <b>CVC:</b> 123
+    </div>
+    <form id="payment-form">
+        <input id="cardholder-name" placeholder="Name" value="Test User" style="width:100%;margin-bottom:10px;">
+        <div id="card-element"></div>
+        <div id="card-errors" class="error"></div>
+        <button id="submit" style="margin-top:10px;">Pay $1.00</button>
+        <div id="result" class="success" style="display:none;margin-top:10px;">Payment token created!</div>
+    </form>
+</div>
+<script>
+    var stripe = Stripe('pk_test_51RhUOz2NHM2ZzUvkTK2uWbSo2xNRNtPRkPgWorhGM3t9D1HeaUqxuBfPv31k8uoeFZKZfGOqZnucTTdTaMCXt0ja00h88kaL8q');
+    var elements = stripe.elements();
+    var card = elements.create('card');
+    card.mount('#card-element');
+    card.on('change', function(event) {
+        document.getElementById('card-errors').textContent = event.error ? event.error.message : '';
+    });
+    document.getElementById('payment-form').addEventListener('submit', function(e) {
+        e.preventDefault();
+        stripe.createToken(card, {name: document.getElementById('cardholder-name').value}).then(function(result) {
+            if (result.error) {
+                document.getElementById('card-errors').textContent = result.error.message;
+            } else {
+                document.getElementById('result').style.display = 'block';
+                document.getElementById('result').textContent = 'Success! Token: ' + result.token.id;
+            }
+        });
+    });
+</script>
+</body>
+</html> 

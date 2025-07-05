@@ -35,11 +35,19 @@ frappe.pages['student-certificate'].on_page_load = function(wrapper) {
         };
     }
 
+    let currentPage = 0;
+    const pageLength = 20;
+
     // Fetch and render certificates
-    function fetch_certificates() {
+    function fetch_certificates(page = 0) {
+        currentPage = page;
         frappe.call({
             method: 'student_certificates.student_certificates.page.student_certificate.student_certificate.get_certificates',
-            args: { filters: get_filter_values() },
+            args: {
+                filters: get_filter_values(),
+                start: page * pageLength,
+                page_length: pageLength
+            },
             callback: function(r) {
                 if (r.message && r.message.length) {
                     const table_html = `
@@ -54,7 +62,8 @@ frappe.pages['student-certificate'].on_page_load = function(wrapper) {
                                     <th>Total</th>
                                     <th>Score</th>
                                     <th>Grade</th>
-                                    <th>Certificate</th>
+                                    <th>Renewal Status</th>
+                                    <th>Actions</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -69,16 +78,37 @@ frappe.pages['student-certificate'].on_page_load = function(wrapper) {
                                         <td>${row.total_score}</td>
                                         <td>${row.grade}</td>
                                         <td>
-                                            <a href="/api/method/frappe.utils.print_format.download_pdf?doctype=Assessment%20Result&name=${row.name}&format=Assessment%20Certificate&no_letterhead=0&letterhead=Letter%20Head%20New&_lang=en" 
-                                               target="_blank" 
-                                               class="btn btn-primary btn-sm">
-                                               Download PDF
-                                            </a>
+                                            <span class="badge badge-${get_renewal_status_badge(row.custom_renewal_status)}">
+                                                ${row.custom_renewal_status || 'Not Renewed'}
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <div class="btn-group" role="group">
+                                                <a href="/api/method/frappe.utils.print_format.download_pdf?doctype=Assessment%20Result&name=${row.name}&format=Assessment%20Certificate&no_letterhead=0&letterhead=Letter%20Head%20New&_lang=en" 
+                                                   target="_blank" 
+                                                   class="btn btn-primary btn-sm">
+                                                   Download PDF
+                                                </a>
+                                                ${get_renewal_button(row)}
+                                            </div>
                                         </td>
                                     </tr>`).join('')}
                             </tbody>
                         </table>`;
-                    $('#certificate-table').html(table_html);
+                    const pagination_html = `
+                        <div class="d-flex justify-content-between align-items-center mt-2">
+                            <button class="btn btn-secondary btn-sm" id="prev-page" ${currentPage === 0 ? 'disabled' : ''}>Previous</button>
+                            <span>Page ${currentPage + 1}</span>
+                            <button class="btn btn-secondary btn-sm" id="next-page" ${r.message.length < pageLength ? 'disabled' : ''}>Next</button>
+                        </div>`;
+                    $('#certificate-table').html(table_html + pagination_html);
+                    // Pagination events
+                    $('#prev-page').off('click').on('click', function() {
+                        if (currentPage > 0) fetch_certificates(currentPage - 1);
+                    });
+                    $('#next-page').off('click').on('click', function() {
+                        if (r.message.length === pageLength) fetch_certificates(currentPage + 1);
+                    });
                 } else {
                     $('#certificate-table').html('<p>No certificate results found.</p>');
                 }
@@ -86,12 +116,37 @@ frappe.pages['student-certificate'].on_page_load = function(wrapper) {
         });
     }
 
+    // Get renewal status badge class
+    function get_renewal_status_badge(status) {
+        switch(status) {
+            case 'Renewed':
+                return 'success';
+            case 'Pending Payment':
+                return 'warning';
+            default:
+                return 'secondary';
+        }
+    }
+
+    // Get renewal button based on status
+    function get_renewal_button(row) {
+        const status = row.custom_renewal_status || 'Not Renewed';
+        
+        if (status === 'Renewed') {
+            return `<button class="btn btn-success btn-sm" disabled>Already Renewed</button>`;
+        } else if (status === 'Pending Payment') {
+            return `<button class="btn btn-warning btn-sm" onclick="check_payment_status('${row.name}')">Check Payment</button>`;
+        } else {
+            return `<button class="btn btn-info btn-sm" onclick="initiate_renewal('${row.name}')">Renew Certificate</button>`;
+        }
+    }
+
     // Initial load
     fetch_certificates();
 
     // Real-time filtering
     $('#filter-student, #filter-program, #filter-customer, #filter-certificate').on('keyup', function() {
-        fetch_certificates();
+        fetch_certificates(0);
     });
 
     // Select all checkboxes
@@ -114,4 +169,61 @@ frappe.pages['student-certificate'].on_page_load = function(wrapper) {
 
         window.open(url, '_blank');
     });
+
+    // Global functions for renewal
+    window.initiate_renewal = function(certificate_name) {
+        frappe.call({
+            method: 'student_certificates.student_certificates.api.certificate_renewal.create_renewal_payment_request',
+            args: { certificate_name: certificate_name },
+            callback: function(r) {
+                if (r.message && r.message.status === 'success') {
+                    frappe.msgprint({
+                        title: 'Renewal Payment',
+                        message: `Renewal fee: $${r.message.amount}<br><br>You will be redirected to the payment page.`,
+                        indicator: 'green'
+                    });
+                    
+                    // Redirect to payment page
+                    setTimeout(() => {
+                        // window.open(r.message.payment_url, '_blank');
+                        window.location.href = r.message.payment_url;
+                    }, 2000);
+                    
+                    // Refresh the table after a delay
+                    setTimeout(() => {
+                        fetch_certificates();
+                    }, 3000);
+                } else {
+                    frappe.msgprint({
+                        title: 'Error',
+                        message: r.message || 'Failed to initiate renewal',
+                        indicator: 'red'
+                    });
+                }
+            }
+        });
+    };
+
+    window.check_payment_status = function(certificate_name) {
+        frappe.call({
+            method: 'student_certificates.student_certificates.api.certificate_renewal.get_certificate_renewal_status',
+            args: { certificate_name: certificate_name },
+            callback: function(r) {
+                if (r.message && r.message.status === 'Renewed') {
+                    frappe.msgprint({
+                        title: 'Payment Successful',
+                        message: 'Your certificate has been renewed successfully!',
+                        indicator: 'green'
+                    });
+                    fetch_certificates();
+                } else {
+                    frappe.msgprint({
+                        title: 'Payment Pending',
+                        message: 'Payment is still pending. Please complete the payment to renew your certificate.',
+                        indicator: 'orange'
+                    });
+                }
+            }
+        });
+    };
 };
