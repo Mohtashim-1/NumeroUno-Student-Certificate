@@ -67,7 +67,7 @@ frappe.pages['student-certificate'].on_page_load = function(wrapper) {
                                 </tr>
                             </thead>
                             <tbody>
-                                ${r.message.map(row => `
+                                ${r.message.filter(row => row.grade === 'PASS').map(row => `
                                     <tr>
                                         <td><input type="checkbox" class="select-cert" value="${row.name}"></td>
                                         <td>${row.name}</td>
@@ -111,6 +111,11 @@ frappe.pages['student-certificate'].on_page_load = function(wrapper) {
                     });
                 } else {
                     $('#certificate-table').html('<p>No certificate results found.</p>');
+                }
+                
+                // Check if there are results but none are PASS
+                if (r.message && r.message.length > 0 && r.message.filter(row => row.grade === 'PASS').length === 0) {
+                    $('#certificate-table').html('<p>No certificates available. Only PASS grades are shown.</p>');
                 }
             }
         });
