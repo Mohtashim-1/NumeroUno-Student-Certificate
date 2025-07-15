@@ -71,6 +71,48 @@ def payment_success(session_id, certificate_name):
 
 
 @frappe.whitelist()
+def check_certificate_expiry(certificate_name):
+    """Check if certificate is expired and needs renewal"""
+    try:
+        certificate = frappe.get_doc("Assessment Result", certificate_name)
+        
+        # Check if certificate has validity period
+        if certificate.validity_period and certificate.validity_period != "NA":
+            from frappe.utils import getdate, add_days
+            
+            # Calculate expiry date based on course start date
+            if certificate.course_start_date:
+                expiry_date = add_days(certificate.course_start_date, int(certificate.validity_period))
+                current_date = getdate()
+                
+                is_expired = current_date > expiry_date
+                days_until_expiry = (expiry_date - current_date).days
+                
+                # Certificate needs renewal if expired or within 30 days of expiry
+                needs_renewal = is_expired or days_until_expiry <= 30
+                
+                return {
+                    "is_expired": is_expired,
+                    "expiry_date": expiry_date,
+                    "days_until_expiry": days_until_expiry,
+                    "needs_renewal": needs_renewal
+                }
+        
+        return {
+            "is_expired": False,
+            "needs_renewal": False,
+            "days_until_expiry": None
+        }
+        
+    except Exception as e:
+        frappe.log_error(f"Failed to check certificate expiry: {str(e)}")
+        return {
+            "is_expired": False,
+            "needs_renewal": False,
+            "days_until_expiry": None
+        }
+
+@frappe.whitelist()
 def get_certificates(filters=None, start=0, page_length=20):
     import json
     if isinstance(filters, str):
@@ -119,7 +161,7 @@ def get_certificates(filters=None, start=0, page_length=20):
         page_length=page_length
     )
     
-    # Add renewal status for each certificate (handle missing custom fields)
+    # Add renewal status and expiry information for each certificate
     for cert in certificates:
         try:
             # Try to get custom renewal fields
@@ -138,11 +180,19 @@ def get_certificates(filters=None, start=0, page_length=20):
                 cert["custom_renewal_date"] = None
                 cert["custom_renewal_amount"] = None
                 cert["custom_renewal_payment_id"] = None
-        except:
+            
+            # Add expiry information
+            expiry_info = check_certificate_expiry(cert["name"])
+            cert.update(expiry_info)
+            
+        except Exception as e:
             # If custom fields don't exist, set defaults
             cert["custom_renewal_status"] = "Not Renewed"
             cert["custom_renewal_date"] = None
             cert["custom_renewal_amount"] = None
             cert["custom_renewal_payment_id"] = None
+            cert["is_expired"] = False
+            cert["needs_renewal"] = False
+            cert["days_until_expiry"] = None
     
     return certificates

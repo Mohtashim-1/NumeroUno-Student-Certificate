@@ -62,6 +62,7 @@ frappe.pages['student-certificate'].on_page_load = function(wrapper) {
                                     <th>Total</th>
                                     <th>Score</th>
                                     <th>Grade</th>
+                                    <th>Expiry Status</th>
                                     <th>Renewal Status</th>
                                     <th>Actions</th>
                                 </tr>
@@ -78,17 +79,16 @@ frappe.pages['student-certificate'].on_page_load = function(wrapper) {
                                         <td>${row.total_score}</td>
                                         <td>${row.grade}</td>
                                         <td>
+                                            ${get_expiry_status_badge(row)}
+                                        </td>
+                                        <td>
                                             <span class="badge badge-${get_renewal_status_badge(row.custom_renewal_status)}">
                                                 ${row.custom_renewal_status || 'Not Renewed'}
                                             </span>
                                         </td>
                                         <td>
                                             <div class="btn-group" role="group">
-                                                <a href="/api/method/frappe.utils.print_format.download_pdf?doctype=Assessment%20Result&name=${row.name}&format=Assessment%20Certificate&no_letterhead=0&letterhead=Letter%20Head%20New&_lang=en" 
-                                                   target="_blank" 
-                                                   class="btn btn-primary btn-sm">
-                                                   Download PDF
-                                                </a>
+                                                ${get_download_button(row)}
                                                 ${get_renewal_button(row)}
                                             </div>
                                         </td>
@@ -121,6 +121,26 @@ frappe.pages['student-certificate'].on_page_load = function(wrapper) {
         });
     }
 
+    // Get expiry status badge
+    function get_expiry_status_badge(row) {
+        const isExpired = row.is_expired || false;
+        const needsRenewal = row.needs_renewal || false;
+        const daysUntilExpiry = row.days_until_expiry;
+        const status = row.custom_renewal_status || 'Not Renewed';
+        
+        if (status === 'Renewed') {
+            return '<span class="badge badge-success">Valid (Renewed)</span>';
+        } else if (isExpired) {
+            return '<span class="badge badge-danger">Expired</span>';
+        } else if (needsRenewal && daysUntilExpiry > 0) {
+            return `<span class="badge badge-warning">Expires in ${daysUntilExpiry} days</span>`;
+        } else if (daysUntilExpiry && daysUntilExpiry > 30) {
+            return `<span class="badge badge-success">Valid (${daysUntilExpiry} days)</span>`;
+        } else {
+            return '<span class="badge badge-secondary">No Expiry</span>';
+        }
+    }
+
     // Get renewal status badge class
     function get_renewal_status_badge(status) {
         switch(status) {
@@ -133,17 +153,40 @@ frappe.pages['student-certificate'].on_page_load = function(wrapper) {
         }
     }
 
-    // Get renewal button based on status
+    // Get renewal button based on status and expiry
     function get_renewal_button(row) {
         const status = row.custom_renewal_status || 'Not Renewed';
+        const isExpired = row.is_expired || false;
+        const needsRenewal = row.needs_renewal || false;
         
         if (status === 'Renewed') {
             return `<button class="btn btn-success btn-sm" disabled>Already Renewed</button>`;
         } else if (status === 'Pending Payment') {
             return `<button class="btn btn-warning btn-sm" onclick="check_payment_status('${row.name}')">Check Payment</button>`;
+        } else if (isExpired || needsRenewal) {
+            return `<button class="btn btn-danger btn-sm" onclick="initiate_renewal('${row.name}')">Renew Certificate</button>`;
         } else {
             return `<button class="btn btn-info btn-sm" onclick="initiate_renewal('${row.name}')">Renew Certificate</button>`;
         }
+    }
+
+    // Get download button based on expiry and renewal status
+    function get_download_button(row) {
+        const status = row.custom_renewal_status || 'Not Renewed';
+        const isExpired = row.is_expired || false;
+        const needsRenewal = row.needs_renewal || false;
+        
+        // Hide download if expired and not renewed
+        if (isExpired && status !== 'Renewed') {
+            return `<button class="btn btn-secondary btn-sm" disabled>Certificate Expired</button>`;
+        }
+        
+        // Show download for valid certificates
+        return `<a href="/api/method/frappe.utils.print_format.download_pdf?doctype=Assessment%20Result&name=${row.name}&format=Assessment%20Certificate&no_letterhead=0&letterhead=Letter%20Head%20New&_lang=en" 
+                   target="_blank" 
+                   class="btn btn-primary btn-sm">
+                   Download PDF
+                </a>`;
     }
 
     // Initial load

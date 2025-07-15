@@ -31,15 +31,7 @@ frappe.pages['student-attendance1'].on_page_load = function (wrapper) {
 
 	function load_pending_attendance() {
 		frappe.call({
-			method: "frappe.client.get_list",
-			args: {
-				doctype: "Student Attendance",
-				fields: ["name", "student", "student_name", "date", "status", "custom_student_signature", "docstatus"],
-				filters: {
-					docstatus: 0
-				},
-				limit_page_length: 100
-			},
+			method: "student_certificates.student_certificates.page.student_attendance1.student_attendance1.get_trainer_pending_attendance",
 			callback: function (r) {
 				const tableBody = $("#attendance-table-body").empty();
 				r.message.forEach(doc => {

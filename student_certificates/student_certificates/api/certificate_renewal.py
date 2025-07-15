@@ -114,10 +114,28 @@ def payment_success(session_id, certificate_name):
     session = stripe.checkout.Session.retrieve(session_id)
 
     if session.payment_status == "paid":
+        # Get the certificate
+        certificate = frappe.get_doc("Assessment Result", certificate_name)
+        
+        # Calculate new expiry date (extend by validity period from renewal date)
+        from frappe.utils import add_days, getdate
+        
+        # Set renewal date to today
+        renewal_date = getdate()
+        
+        # Calculate new expiry date based on validity period
+        if certificate.validity_period and certificate.validity_period != "NA":
+            new_expiry_date = add_days(renewal_date, int(certificate.validity_period))
+        else:
+            # Default to 1 year if no validity period
+            new_expiry_date = add_days(renewal_date, 365)
+        
+        # Update certificate with renewal information and new expiry
         frappe.db.set_value("Assessment Result", certificate_name, {
             "custom_renewal_status": "Renewed",
             "custom_renewal_payment_id": session.payment_intent,
-            "custom_renewal_date": frappe.utils.now()
+            "custom_renewal_date": renewal_date,
+            "certificate_validity_date": new_expiry_date
         })
         frappe.db.commit()
 
@@ -183,11 +201,28 @@ def handle_stripe_webhook():
 
         if ref_docname:
             try:
-                # Only fetch necessary fields, not full document
+                # Get the certificate
+                certificate = frappe.get_doc("Assessment Result", ref_docname)
+                
+                # Calculate new expiry date (extend by validity period from renewal date)
+                from frappe.utils import add_days, getdate
+                
+                # Set renewal date to today
+                renewal_date = getdate()
+                
+                # Calculate new expiry date based on validity period
+                if certificate.validity_period and certificate.validity_period != "NA":
+                    new_expiry_date = add_days(renewal_date, int(certificate.validity_period))
+                else:
+                    # Default to 1 year if no validity period
+                    new_expiry_date = add_days(renewal_date, 365)
+                
+                # Update certificate with renewal information and new expiry
                 frappe.db.set_value("Assessment Result", ref_docname, {
                     "custom_renewal_status": "Renewed",
                     "custom_renewal_payment_id": session.get("payment_intent"),
-                    "custom_renewal_date": frappe.utils.now()
+                    "custom_renewal_date": renewal_date,
+                    "certificate_validity_date": new_expiry_date
                 })
 
                 send_renewal_success_notification(ref_docname)
