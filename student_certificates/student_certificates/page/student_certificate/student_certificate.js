@@ -178,11 +178,11 @@ frappe.pages['student-certificate'].on_page_load = function(wrapper) {
         
         // Hide download if expired and not renewed
         if (isExpired && status !== 'Renewed') {
-            return `<button class="btn btn-secondary btn-sm" disabled>Certificate Expired</button>`;
+            return `<button class="btn btn-secondary btn-sm" disabled>Certificate Download Expired</button>`;
         }
         
         // Show download for valid certificates
-        return `<a href="/api/method/frappe.utils.print_format.download_pdf?doctype=Assessment%20Result&name=${row.name}&format=Assessment%20Certificate&no_letterhead=0&letterhead=Letter%20Head%20New&_lang=en" 
+        return `<a href="/api/method/frappe.utils.print_format.download_pdf?doctype=Assessment%20Result&name=${row.name}&format=Assessment%20Result&no_letterhead=0&letterhead=Letter%20Head%20New&_lang=en" 
                    target="_blank" 
                    class="btn btn-primary btn-sm">
                    Download PDF
