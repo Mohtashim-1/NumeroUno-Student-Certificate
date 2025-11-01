@@ -134,6 +134,8 @@ def get_certificates(filters=None, start=0, page_length=20):
             base_filters["program"] = ["like", f"%{filters['program']}%"]
         if filters.get("customer"):
             base_filters["customer_name"] = ["like", f"%{filters['customer']}%"]
+        if filters.get("student_group"):
+            base_filters["student_group"] = ["like", f"%{filters['student_group']}%"]
         if filters.get("name"):
             base_filters["name"] = ["like", f"%{filters['name']}%"]
 
@@ -154,7 +156,7 @@ def get_certificates(filters=None, start=0, page_length=20):
         filters=base_filters,
         fields=[
             "name", "program", "maximum_score", "total_score", "grade", 
-            "student", "customer_name"
+            "student", "customer_name", "student_group"
         ],
         order_by="modified desc",
         start=start,

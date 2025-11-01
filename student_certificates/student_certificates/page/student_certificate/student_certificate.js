@@ -9,10 +9,11 @@ frappe.pages['student-certificate'].on_page_load = function(wrapper) {
     const filter_section = `
         <div class="mb-3">
             <div class="row">
-                <div class="col-md-3"><input type="text" id="filter-certificate" class="form-control" placeholder="Filter by Certificate #"></div>
-                <div class="col-md-3"><input type="text" id="filter-program" class="form-control" placeholder="Filter by Program"></div>
-                <div class="col-md-3"><input type="text" id="filter-student" class="form-control" placeholder="Filter by Student"></div>
-                <div class="col-md-3"><input type="text" id="filter-customer" class="form-control" placeholder="Filter by Customer"></div>
+                <div class="col-md-2"><input type="text" id="filter-certificate" class="form-control" placeholder="Filter by Certificate #"></div>
+                <div class="col-md-2"><input type="text" id="filter-program" class="form-control" placeholder="Filter by Program"></div>
+                <div class="col-md-2"><input type="text" id="filter-student" class="form-control" placeholder="Filter by Student"></div>
+                <div class="col-md-2"><input type="text" id="filter-customer" class="form-control" placeholder="Filter by Customer"></div>
+                <div class="col-md-2"><input type="text" id="filter-student-group" class="form-control" placeholder="Filter by Student Group"></div>
             </div>
             <div class="row mt-2">
                 <div class="col-md-12 text-right">
@@ -31,6 +32,7 @@ frappe.pages['student-certificate'].on_page_load = function(wrapper) {
             student: $('#filter-student').val(),
             program: $('#filter-program').val(),
             customer: $('#filter-customer').val(),
+            student_group: $('#filter-student-group').val(),
             name: $('#filter-certificate').val()
         };
     }
@@ -59,6 +61,7 @@ frappe.pages['student-certificate'].on_page_load = function(wrapper) {
                                     <th>Program</th>
                                     <th>Student</th>
                                     <th>Customer</th>
+                                    <th>Student Group</th>
                                     <th>Total</th>
                                     <th>Score</th>
                                     <th>Grade</th>
@@ -75,6 +78,7 @@ frappe.pages['student-certificate'].on_page_load = function(wrapper) {
                                         <td>${row.program}</td>
                                         <td>${row.student || '-'}</td>
                                         <td>${row.customer_name || '-'}</td>
+                                        <td>${row.student_group || '-'}</td>
                                         <td>${row.maximum_score}</td>
                                         <td>${row.total_score}</td>
                                         <td>${row.grade}</td>
@@ -193,7 +197,7 @@ frappe.pages['student-certificate'].on_page_load = function(wrapper) {
     fetch_certificates();
 
     // Real-time filtering
-    $('#filter-student, #filter-program, #filter-customer, #filter-certificate').on('keyup', function() {
+    $('#filter-student, #filter-program, #filter-customer, #filter-student-group, #filter-certificate').on('keyup', function() {
         fetch_certificates(0);
     });
 
