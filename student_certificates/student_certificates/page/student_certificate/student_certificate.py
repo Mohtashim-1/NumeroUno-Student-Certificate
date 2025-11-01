@@ -31,7 +31,7 @@ def create_renewal_payment_request(certificate_name):
         metadata={
             'certificate_name': doc.name,
             'student': doc.student or '',
-            'customer': doc.custom_customer or '',
+            'customer': doc.customer_name or '',
         },
         success_url=frappe.utils.get_url(f"/api/method/student_certificates.student_certificates.api.certificate_renewal.payment_success?session_id={{CHECKOUT_SESSION_ID}}&certificate_name={certificate_name}"),
         cancel_url=frappe.utils.get_url("/certificate-payment-failed")
@@ -133,7 +133,7 @@ def get_certificates(filters=None, start=0, page_length=20):
         if filters.get("program"):
             base_filters["program"] = ["like", f"%{filters['program']}%"]
         if filters.get("customer"):
-            base_filters["custom_customer"] = ["like", f"%{filters['customer']}%"]
+            base_filters["customer_name"] = ["like", f"%{filters['customer']}%"]
         if filters.get("name"):
             base_filters["name"] = ["like", f"%{filters['name']}%"]
 
@@ -142,9 +142,9 @@ def get_certificates(filters=None, start=0, page_length=20):
 
     # If not System Manager, apply ownership/customer filter
     if not is_sys_manager:
-        custom_customer_id = frappe.db.get_value("Customer", {"owner": user}, "custom_customer_id")
-        if custom_customer_id:
-            base_filters["custom_customer"] = custom_customer_id
+        customer_name = frappe.db.get_value("Customer", {"owner": user}, "customer_name")
+        if customer_name:
+            base_filters["customer_name"] = customer_name
         else:
             base_filters["owner"] = user
 
@@ -154,7 +154,7 @@ def get_certificates(filters=None, start=0, page_length=20):
         filters=base_filters,
         fields=[
             "name", "program", "maximum_score", "total_score", "grade", 
-            "student", "custom_customer"
+            "student", "customer_name"
         ],
         order_by="modified desc",
         start=start,
