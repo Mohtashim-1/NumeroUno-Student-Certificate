@@ -113,6 +113,55 @@ def check_certificate_expiry(certificate_name):
         }
 
 @frappe.whitelist()
+def debug_certificate_access(certificate_name=None, user_email=None):
+    """Debug function to check why a certificate is not showing"""
+    user = user_email or frappe.session.user
+    debug_info = {
+        "user": user,
+        "is_system_manager": "System Manager" in frappe.get_roles(user),
+        "user_email": frappe.db.get_value("User", user, "email"),
+    }
+    
+    # Check Customer by owner
+    customer_by_owner = frappe.db.get_value("Customer", {"owner": user}, ["name", "customer_name"], as_dict=True)
+    debug_info["customer_by_owner"] = customer_by_owner
+    
+    # Check Contact by email
+    user_email_val = debug_info["user_email"]
+    if user_email_val:
+        contact = frappe.db.get_value("Contact", {"email_id": user_email_val}, ["name"], as_dict=True)
+        debug_info["contact_by_email"] = contact
+        if contact:
+            customer_links = frappe.get_all(
+                "Dynamic Link",
+                filters={
+                    "link_doctype": "Customer",
+                    "parenttype": "Contact",
+                    "parent": contact["name"]
+                },
+                fields=["link_name"]
+            )
+            debug_info["customers_via_contact"] = [link["link_name"] for link in customer_links]
+    
+    # If certificate_name provided, check that specific certificate
+    if certificate_name:
+        cert = frappe.db.get_value(
+            "Assessment Result",
+            certificate_name,
+            ["name", "customer_name", "owner", "docstatus", "custom_show_on_portal", "grade"],
+            as_dict=True
+        )
+        debug_info["certificate"] = cert
+        if cert:
+            # Check if customer matches
+            if customer_by_owner:
+                debug_info["customer_match"] = cert.get("customer_name") == customer_by_owner.get("customer_name")
+            if debug_info.get("customers_via_contact"):
+                debug_info["customer_match_via_contact"] = cert.get("customer_name") in debug_info["customers_via_contact"]
+    
+    return debug_info
+
+@frappe.whitelist()
 def get_certificates(filters=None, start=0, page_length=20):
     import json
     if isinstance(filters, str):
@@ -144,10 +193,43 @@ def get_certificates(filters=None, start=0, page_length=20):
 
     # If not System Manager, apply ownership/customer filter
     if not is_sys_manager:
+        customer_names = []
+        
+        # First, try to find Customer where owner = user
         customer_name = frappe.db.get_value("Customer", {"owner": user}, "customer_name")
         if customer_name:
-            base_filters["customer_name"] = customer_name
+            customer_names.append(customer_name)
+        
+        # Also try to find Customer via Contact email
+        user_email = frappe.db.get_value("User", user, "email")
+        if user_email:
+            # Find Contact with matching email
+            contact = frappe.db.get_value("Contact", {"email_id": user_email}, "name")
+            if contact:
+                # Get all customers linked to this contact
+                customer_links = frappe.get_all(
+                    "Dynamic Link",
+                    filters={
+                        "link_doctype": "Customer",
+                        "parenttype": "Contact",
+                        "parent": contact
+                    },
+                    fields=["link_name"]
+                )
+                for link in customer_links:
+                    if link["link_name"] not in customer_names:
+                        customer_names.append(link["link_name"])
+        
+        # Apply customer filter if we found any customers
+        if customer_names:
+            if len(customer_names) == 1:
+                # Single customer - use direct match
+                base_filters["customer_name"] = customer_names[0]
+            else:
+                # Multiple customers - use IN operator
+                base_filters["customer_name"] = ["in", customer_names]
         else:
+            # Fallback: show certificates where user is the owner
             base_filters["owner"] = user
 
     # Get basic certificate data with pagination
