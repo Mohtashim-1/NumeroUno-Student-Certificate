@@ -129,19 +129,50 @@ def debug_certificate_access(certificate_name=None, user_email=None):
     # Check Contact by email
     user_email_val = debug_info["user_email"]
     if user_email_val:
-        contact = frappe.db.get_value("Contact", {"email_id": user_email_val}, ["name"], as_dict=True)
-        debug_info["contact_by_email"] = contact
-        if contact:
+        # Check Customer.email_id field directly
+        customers_by_email = frappe.get_all(
+            "Customer",
+            filters={"email_id": user_email_val},
+            fields=["name", "customer_name"],
+            as_dict=True
+        )
+        debug_info["customers_by_email_id"] = customers_by_email
+        
+        # Check Contact Email table (newer structure)
+        contact_emails = frappe.get_all(
+            "Contact Email",
+            filters={"email_id": user_email_val},
+            fields=["parent"],
+            as_dict=True
+        )
+        contact_names = [ce["parent"] for ce in contact_emails]
+        
+        # Also check old Contact.email_id field
+        old_contact = frappe.db.get_value("Contact", {"email_id": user_email_val}, ["name"], as_dict=True)
+        if old_contact:
+            contact_names.append(old_contact["name"])
+        
+        debug_info["contacts_by_email"] = contact_names
+        
+        if contact_names:
             customer_links = frappe.get_all(
                 "Dynamic Link",
                 filters={
                     "link_doctype": "Customer",
                     "parenttype": "Contact",
-                    "parent": contact["name"]
+                    "parent": ["in", contact_names]
                 },
                 fields=["link_name"]
             )
-            debug_info["customers_via_contact"] = [link["link_name"] for link in customer_links]
+            # Get customer_name for each linked customer
+            linked_customers = []
+            for link in customer_links:
+                cust_name = frappe.db.get_value("Customer", link["link_name"], "customer_name")
+                linked_customers.append({
+                    "customer": link["link_name"],
+                    "customer_name": cust_name
+                })
+            debug_info["customers_via_contact"] = linked_customers
     
     # If certificate_name provided, check that specific certificate
     if certificate_name:
@@ -200,25 +231,49 @@ def get_certificates(filters=None, start=0, page_length=20):
         if customer_name:
             customer_names.append(customer_name)
         
-        # Also try to find Customer via Contact email
+        # Get user's email
         user_email = frappe.db.get_value("User", user, "email")
         if user_email:
-            # Find Contact with matching email
-            contact = frappe.db.get_value("Contact", {"email_id": user_email}, "name")
-            if contact:
-                # Get all customers linked to this contact
+            # Method 1: Find Customer records where email_id field matches user email
+            customers_by_email = frappe.get_all(
+                "Customer",
+                filters={"email_id": user_email},
+                fields=["customer_name"]
+            )
+            for cust in customers_by_email:
+                if cust.get("customer_name") and cust["customer_name"] not in customer_names:
+                    customer_names.append(cust["customer_name"])
+            
+            # Method 2: Find Contact with matching email, then get linked customers
+            # Check Contact Email table (newer structure)
+            contact_emails = frappe.get_all(
+                "Contact Email",
+                filters={"email_id": user_email},
+                fields=["parent"]
+            )
+            contact_names = [ce["parent"] for ce in contact_emails]
+            
+            # Also check old Contact.email_id field (if exists)
+            old_contact = frappe.db.get_value("Contact", {"email_id": user_email}, "name")
+            if old_contact and old_contact not in contact_names:
+                contact_names.append(old_contact)
+            
+            # Get all customers linked to these contacts
+            if contact_names:
                 customer_links = frappe.get_all(
                     "Dynamic Link",
                     filters={
                         "link_doctype": "Customer",
                         "parenttype": "Contact",
-                        "parent": contact
+                        "parent": ["in", contact_names]
                     },
                     fields=["link_name"]
                 )
                 for link in customer_links:
-                    if link["link_name"] not in customer_names:
-                        customer_names.append(link["link_name"])
+                    # Get customer_name from Customer record
+                    link_customer_name = frappe.db.get_value("Customer", link["link_name"], "customer_name")
+                    if link_customer_name and link_customer_name not in customer_names:
+                        customer_names.append(link_customer_name)
         
         # Apply customer filter if we found any customers
         if customer_names:
