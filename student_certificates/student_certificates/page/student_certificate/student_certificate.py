@@ -97,7 +97,7 @@ def check_certificate_expiry(certificate_name):
                     "days_until_expiry": days_until_expiry,
                     "needs_renewal": needs_renewal
                 }
-        
+    
         return {
             "is_expired": False,
             "needs_renewal": False,

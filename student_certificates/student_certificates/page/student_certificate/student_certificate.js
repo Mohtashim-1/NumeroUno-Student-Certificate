@@ -217,8 +217,24 @@ frappe.pages['student-certificate'].on_page_load = function(wrapper) {
             return;
         }
 
-        const url = `/api/method/frappe.utils.print_format.download_multi_pdf?doctype=Assessment%20Result&name=${encodeURIComponent(JSON.stringify(selected))}&format=Assessment%20Certificate&no_letterhead=0&letterhead=Letter%20Head%20New&options=${encodeURIComponent(JSON.stringify({ "page-size": "A4" }))}`;
+        // Use the same format as single download for consistency
+        // Single download uses "Assesment Result1" (note the typo in the format name)
+        const formatName = "Assesment Result1";
+        const letterheadName = "Letter Head New";
+        
+        // Build URL with proper encoding - matching single download format exactly
+        const url = `/api/method/frappe.utils.print_format.download_multi_pdf?` +
+            `doctype=Assessment%20Result` +
+            `&name=${encodeURIComponent(JSON.stringify(selected))}` +
+            `&format=${encodeURIComponent(formatName)}` +
+            `&no_letterhead=0` +
+            `&letterhead=${encodeURIComponent(letterheadName)}` +
+            `&options=${encodeURIComponent(JSON.stringify({ "page-size": "A4" }))}`;
 
+        console.log("Downloading multiple PDFs:", selected);
+        console.log("Format:", formatName);
+        console.log("URL:", url);
+        
         window.open(url, '_blank');
     });
 
