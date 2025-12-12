@@ -1,1 +1,2 @@
 stripe==12.3.0
+qrcode[pil]>=7.4.2
