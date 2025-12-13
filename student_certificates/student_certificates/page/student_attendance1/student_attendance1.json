@@ -10,7 +10,14 @@
  "name": "student-attendance1",
  "owner": "Administrator",
  "page_name": "student-attendance1",
- "roles": [],
+ "roles": [
+  {
+   "role": "System Manager"
+  },
+  {
+   "role": "Instructor"
+  }
+ ],
  "script": null,
  "standard": "Yes",
  "style": null,
