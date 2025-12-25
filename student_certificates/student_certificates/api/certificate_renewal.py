@@ -236,31 +236,52 @@ def handle_stripe_webhook():
 def check_certificate_expiry(certificate_name):
     """Check if certificate is expired and needs renewal"""
     try:
-        certificate = frappe.get_doc("Assessment Result", certificate_name)
+        from frappe.utils import getdate, add_days, get_datetime
         
-        # Check if certificate has validity period
-        if certificate.validity_period and certificate.validity_period != "NA":
-            from frappe.utils import getdate, add_days
+        certificate = frappe.get_doc("Assessment Result", certificate_name)
+        current_date = getdate()
+        
+        # Primary check: Certificate download expires 365 days from creation date
+        if certificate.creation:
+            creation_date = getdate(certificate.creation)
+            download_expiry_date = add_days(creation_date, 365)
+            is_download_expired = current_date > download_expiry_date
+            days_until_download_expiry = (download_expiry_date - current_date).days
             
-            # Calculate expiry date
+            # Certificate download needs renewal if expired or within 30 days of expiry
+            needs_download_renewal = is_download_expired or days_until_download_expiry <= 30
+        else:
+            # If no creation date, default to not expired
+            is_download_expired = False
+            days_until_download_expiry = None
+            needs_download_renewal = False
+            download_expiry_date = None
+        
+        # Secondary check: Check if certificate has validity period (for display purposes)
+        validity_expiry_date = None
+        is_validity_expired = False
+        days_until_validity_expiry = None
+        
+        if certificate.validity_period and certificate.validity_period != "NA":
             if certificate.course_start_date:
-                expiry_date = add_days(certificate.course_start_date, int(certificate.validity_period))
-                current_date = getdate()
-                
-                is_expired = current_date > expiry_date
-                days_until_expiry = (expiry_date - current_date).days
-                
-                return {
-                    "is_expired": is_expired,
-                    "expiry_date": expiry_date,
-                    "days_until_expiry": days_until_expiry,
-                    "needs_renewal": is_expired or days_until_expiry <= 30,  # Renewal needed if expired or within 30 days
-                    "renewal_status": getattr(certificate, 'custom_renewal_status', None) or "Not Renewed"
-                }
+                validity_expiry_date = add_days(certificate.course_start_date, int(certificate.validity_period))
+                is_validity_expired = current_date > validity_expiry_date
+                days_until_validity_expiry = (validity_expiry_date - current_date).days
+        
+        # For download expiry, use the 365-day rule (primary)
+        # Download is expired if 365 days have passed since creation
+        is_expired = is_download_expired
+        needs_renewal = needs_download_renewal
+        
+        # Use download expiry date for days calculation
+        days_until_expiry = days_until_download_expiry if days_until_download_expiry is not None else days_until_validity_expiry
+        expiry_date = download_expiry_date if download_expiry_date else validity_expiry_date
         
         return {
-            "is_expired": False,
-            "needs_renewal": False,
+            "is_expired": is_expired,
+            "expiry_date": expiry_date,
+            "days_until_expiry": days_until_expiry,
+            "needs_renewal": needs_renewal,
             "renewal_status": getattr(certificate, 'custom_renewal_status', None) or "Not Renewed"
         }
         

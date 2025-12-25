@@ -122,13 +122,11 @@ app_license = "mit"
 # ---------------
 # Hook on document methods and events
 
-# doc_events = {
-# 	"*": {
-# 		"on_update": "method",
-# 		"on_cancel": "method",
-# 		"on_trash": "method"
-# 	}
-# }
+doc_events = {
+	"Assessment Result": {
+		"validate": "student_certificates.document_events.set_customer_name_from_student",
+	}
+}
 
 # Scheduled Tasks
 # ---------------

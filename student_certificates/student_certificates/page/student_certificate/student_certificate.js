@@ -126,6 +126,7 @@ frappe.pages['student-certificate'].on_page_load = function(wrapper) {
     }
 
     // Get expiry status badge
+    // Every certificate expires 365 days after creation, so there's always an expiry
     function get_expiry_status_badge(row) {
         const isExpired = row.is_expired || false;
         const needsRenewal = row.needs_renewal || false;
@@ -136,12 +137,20 @@ frappe.pages['student-certificate'].on_page_load = function(wrapper) {
             return '<span class="badge badge-success">Valid (Renewed)</span>';
         } else if (isExpired) {
             return '<span class="badge badge-danger">Expired</span>';
-        } else if (needsRenewal && daysUntilExpiry > 0) {
+        } else if (needsRenewal && daysUntilExpiry !== null && daysUntilExpiry !== undefined && daysUntilExpiry > 0) {
             return `<span class="badge badge-warning">Expires in ${daysUntilExpiry} days</span>`;
-        } else if (daysUntilExpiry && daysUntilExpiry > 30) {
+        } else if (daysUntilExpiry !== null && daysUntilExpiry !== undefined && daysUntilExpiry > 30) {
             return `<span class="badge badge-success">Valid (${daysUntilExpiry} days)</span>`;
+        } else if (daysUntilExpiry !== null && daysUntilExpiry !== undefined && daysUntilExpiry > 0) {
+            // Handle case where daysUntilExpiry is between 0-30 but needsRenewal is false
+            return `<span class="badge badge-warning">Expires in ${daysUntilExpiry} days</span>`;
+        } else if (daysUntilExpiry !== null && daysUntilExpiry !== undefined && daysUntilExpiry <= 0) {
+            // If daysUntilExpiry is 0 or negative, it's expired
+            return '<span class="badge badge-danger">Expired</span>';
         } else {
-            return '<span class="badge badge-secondary">No Expiry</span>';
+            // Fallback: if daysUntilExpiry is null/undefined (shouldn't happen), show as expired
+            // This ensures we never show "No Expiry" since every certificate has a 365-day expiry rule
+            return '<span class="badge badge-danger">Expired</span>';
         }
     }
 

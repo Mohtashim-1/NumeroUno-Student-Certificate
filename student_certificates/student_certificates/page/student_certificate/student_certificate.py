@@ -74,43 +74,72 @@ def payment_success(session_id, certificate_name):
 def check_certificate_expiry(certificate_name):
     """Check if certificate is expired and needs renewal"""
     try:
-        certificate = frappe.get_doc("Assessment Result", certificate_name)
+        from frappe.utils import getdate, add_days, get_datetime
         
-        # Check if certificate has validity period
-        if certificate.validity_period and certificate.validity_period != "NA":
-            from frappe.utils import getdate, add_days
-            
-            # Calculate expiry date based on course start date
-            if certificate.course_start_date:
-                expiry_date = add_days(certificate.course_start_date, int(certificate.validity_period))
-                current_date = getdate()
-                
-                is_expired = current_date > expiry_date
-                days_until_expiry = (expiry_date - current_date).days
-                
-                # Certificate needs renewal if expired or within 30 days of expiry
-                needs_renewal = is_expired or days_until_expiry <= 30
-                
-                return {
-                    "is_expired": is_expired,
-                    "expiry_date": expiry_date,
-                    "days_until_expiry": days_until_expiry,
-                    "needs_renewal": needs_renewal
-                }
-    
+        certificate = frappe.get_doc("Assessment Result", certificate_name)
+        current_date = getdate()
+        
+        # Certificate download expires 365 days from creation date
+        # Every certificate has this rule, so we always calculate expiry
+        creation_date = None
+        if certificate.creation:
+            creation_date = getdate(certificate.creation)
+        elif certificate.get("creation"):
+            creation_date = getdate(certificate.get("creation"))
+        else:
+            # Fallback: use modified date if creation doesn't exist (shouldn't happen normally)
+            creation_date = getdate(certificate.modified) if certificate.modified else current_date
+        
+        # Always calculate expiry: 365 days from creation
+        download_expiry_date = add_days(creation_date, 365)
+        is_download_expired = current_date > download_expiry_date
+        days_until_download_expiry = (download_expiry_date - current_date).days
+        
+        # Certificate download needs renewal if expired or within 30 days of expiry
+        needs_download_renewal = is_download_expired or days_until_download_expiry <= 30
+        
+        # For download expiry, use the 365-day rule (primary and only rule)
+        # Download is expired if 365 days have passed since creation
+        is_expired = is_download_expired
+        needs_renewal = needs_download_renewal
+        
+        # days_until_expiry is always calculated from the 365-day rule
+        days_until_expiry = days_until_download_expiry
+        expiry_date = download_expiry_date
+        
         return {
-            "is_expired": False,
-            "needs_renewal": False,
-            "days_until_expiry": None
+            "is_expired": is_expired,
+            "expiry_date": expiry_date,
+            "days_until_expiry": days_until_expiry,
+            "needs_renewal": needs_renewal
         }
         
     except Exception as e:
         frappe.log_error(f"Failed to check certificate expiry: {str(e)}")
-        return {
-            "is_expired": False,
-            "needs_renewal": False,
-            "days_until_expiry": None
-        }
+        # Even on error, try to calculate expiry from creation date as fallback
+        try:
+            from frappe.utils import getdate, add_days
+            certificate = frappe.get_doc("Assessment Result", certificate_name)
+            current_date = getdate()
+            creation_date = getdate(certificate.creation) if certificate.creation else getdate(certificate.modified) if certificate.modified else current_date
+            download_expiry_date = add_days(creation_date, 365)
+            days_until_expiry = (download_expiry_date - current_date).days
+            is_expired = current_date > download_expiry_date
+            needs_renewal = is_expired or days_until_expiry <= 30
+            return {
+                "is_expired": is_expired,
+                "needs_renewal": needs_renewal,
+                "days_until_expiry": days_until_expiry,
+                "expiry_date": download_expiry_date
+            }
+        except:
+            # Last resort: return a default that shows as expired (should never reach here)
+            return {
+                "is_expired": True,
+                "needs_renewal": True,
+                "days_until_expiry": -1,
+                "expiry_date": None
+            }
 
 @frappe.whitelist()
 def debug_certificate_access(certificate_name=None, user_email=None):
@@ -302,6 +331,11 @@ def get_certificates(filters=None, start=0, page_length=20):
     
     # Add renewal status and expiry information for each certificate
     for cert in certificates:
+        # Fallback: If customer_name is empty, fetch from student.customer_name
+        if not cert.get("customer_name") and cert.get("student"):
+            student_customer_name = frappe.db.get_value("Student", cert["student"], "customer_name")
+            if student_customer_name:
+                cert["customer_name"] = student_customer_name
         try:
             # Try to get custom renewal fields
             renewal_data = frappe.db.get_value(
