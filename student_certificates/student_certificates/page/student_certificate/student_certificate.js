@@ -186,7 +186,7 @@ frappe.pages['student-certificate'].on_page_load = function(wrapper) {
         }
         
         // Show download for valid certificates
-        return `<a href="/api/method/frappe.utils.print_format.download_pdf?doctype=Assessment%20Result&name=${row.name}&format=Assesment%20Result1&no_letterhead=0&letterhead=Letter%20Head%20New&_lang=en" 
+        return `<a href="/api/method/frappe.utils.print_format.download_pdf?doctype=Assessment%20Result&name=${row.name}&format=Assessment%20Result&no_letterhead=0&letterhead=Letter%20Head%20New&_lang=en" 
                    target="_blank" 
                    class="btn btn-primary btn-sm">
                    Download PDF
@@ -218,8 +218,8 @@ frappe.pages['student-certificate'].on_page_load = function(wrapper) {
         }
 
         // Use the same format as single download for consistency
-        // Single download uses "Assesment Result1" (note the typo in the format name)
-        const formatName = "Assesment Result1";
+        // Using "Assessment Result" format
+        const formatName = "Assessment Result";
         const letterheadName = "Letter Head New";
         
         // Build URL with proper encoding - matching single download format exactly

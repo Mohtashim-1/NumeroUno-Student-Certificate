@@ -5,7 +5,7 @@ import traceback
 def get_trainer_pending_attendance():
     try:
         user = frappe.session.user
-        user_roles = frappe.get_roles(user)
+        user_roles = frappe.get_roles(user) 
         user_email = frappe.db.get_value("User", user, "email")
         
         # Log function entry
