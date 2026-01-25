@@ -352,6 +352,11 @@ frappe.pages['student-certificate'].on_page_load = function(wrapper) {
                 flex-wrap: wrap;
             }
 
+            .table-actions .portal-btn {
+                min-width: 130px;
+                justify-content: center;
+            }
+
             .select-chip {
                 display: inline-flex;
                 align-items: center;
