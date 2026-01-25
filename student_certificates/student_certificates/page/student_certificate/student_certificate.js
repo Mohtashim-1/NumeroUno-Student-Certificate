@@ -16,6 +16,8 @@ frappe.pages['student-certificate'].on_page_load = function(wrapper) {
                 --surface-muted: #f5f7fa;
                 --accent: #ff7a3d;
                 --accent-dark: #d85c24;
+                --accent-soft: rgba(255, 122, 61, 0.12);
+                --glow: rgba(15, 28, 45, 0.08);
                 font-family: "Manrope", "Space Grotesk", sans-serif;
                 color: var(--ink);
                 background:
@@ -33,7 +35,7 @@ frappe.pages['student-certificate'].on_page_load = function(wrapper) {
                 gap: 18px;
                 justify-content: space-between;
                 align-items: center;
-                margin-bottom: 20px;
+                margin-bottom: 16px;
             }
 
             .certificate-hero h2 {
@@ -50,10 +52,22 @@ frappe.pages['student-certificate'].on_page_load = function(wrapper) {
                 font-size: 14px;
             }
 
+            .certificate-hero .hero-badge {
+                display: inline-flex;
+                align-items: center;
+                gap: 8px;
+                padding: 6px 12px;
+                border-radius: 999px;
+                background: rgba(255, 255, 255, 0.9);
+                border: 1px solid #eceff3;
+                color: var(--muted);
+                font-size: 12px;
+            }
+
             .certificate-filters {
                 background: var(--surface);
                 border-radius: 16px;
-                box-shadow: 0 14px 34px rgba(15, 28, 45, 0.08);
+                box-shadow: 0 16px 36px rgba(15, 28, 45, 0.08);
                 padding: 16px;
                 display: grid;
                 gap: 14px;
@@ -78,6 +92,7 @@ frappe.pages['student-certificate'].on_page_load = function(wrapper) {
                 border: 1px solid #e1e4e8;
                 box-shadow: none;
                 height: 36px;
+                background: #fbfbfc;
             }
 
             .filter-field .date-input.form-control {
@@ -210,6 +225,7 @@ frappe.pages['student-certificate'].on_page_load = function(wrapper) {
                 align-items: center;
                 justify-content: center;
                 text-decoration: none;
+                transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
             }
 
             .portal-btn-ghost {
@@ -217,9 +233,23 @@ frappe.pages['student-certificate'].on_page_load = function(wrapper) {
                 color: var(--ink);
             }
 
+            .portal-btn-download {
+                background: #ffe9dc;
+                color: #b85a2d;
+                border: 1px solid #f7c6ab;
+                box-shadow: 0 10px 18px rgba(216, 92, 36, 0.18);
+            }
+
+            .portal-btn-download:hover {
+                background: #ffd9c6;
+                color: #a44c22;
+                box-shadow: 0 14px 22px rgba(216, 92, 36, 0.22);
+            }
+
             .portal-btn-primary {
                 background: var(--accent);
                 color: #ffffff;
+                box-shadow: 0 12px 20px rgba(255, 122, 61, 0.25);
             }
 
             .portal-reset-btn {
@@ -228,6 +258,10 @@ frappe.pages['student-certificate'].on_page_load = function(wrapper) {
                 color: #5a3a2b;
                 box-shadow: 0 10px 20px rgba(216, 92, 36, 0.12);
                 transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+            }
+
+            .portal-btn:hover {
+                transform: translateY(-1px);
             }
 
             .portal-reset-btn:hover {
@@ -348,6 +382,10 @@ frappe.pages['student-certificate'].on_page_load = function(wrapper) {
                     <h2>Student Certificates</h2>
                     <p>Track certificate status and download or renew in one place.</p>
                 </div>
+                <div class="hero-badge">
+                    <span>Last refresh</span>
+                    <strong id="cert-last-refresh">Just now</strong>
+                </div>
             </div>
 
             <div class="certificate-filters">
@@ -446,6 +484,7 @@ frappe.pages['student-certificate'].on_page_load = function(wrapper) {
     // Fetch and render certificates
     function fetch_certificates(page = 0) {
         currentPage = page;
+        $("#cert-last-refresh").text(frappe.datetime.now_time(true));
         frappe.call({
             method: 'student_certificates.student_certificates.page.student_certificate.student_certificate.get_certificates',
             args: {
@@ -592,7 +631,7 @@ frappe.pages['student-certificate'].on_page_load = function(wrapper) {
         // Show download for valid certificates
         return `<a href="/api/method/frappe.utils.print_format.download_pdf?doctype=Assessment%20Result&name=${row.name}&format=Assessment%20Result&no_letterhead=0&letterhead=Letter%20Head%20New&_lang=en" 
                    target="_blank" 
-                   class="portal-btn portal-btn-ghost">
+                   class="portal-btn portal-btn-download">
                    Download PDF
                 </a>`;
     }
