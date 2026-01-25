@@ -661,7 +661,7 @@ frappe.pages['student-certificate'].on_page_load = function(wrapper) {
     function format_date(value) {
         if (!value) return '';
         try {
-            return frappe.datetime.str_to_user(value);
+            return frappe.datetime.str_to_user(value, false, true);
         } catch (e) {
             return value;
         }
