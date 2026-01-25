@@ -614,11 +614,11 @@ frappe.pages['student-certificate'].on_page_load = function(wrapper) {
         if (status === 'Renewed') {
             return `<button class="portal-btn portal-btn-ghost" disabled>Already Renewed</button>`;
         } else if (status === 'Pending Payment') {
-            return `<button class="portal-btn portal-btn-ghost" onclick="check_payment_status('${row.name}')">Check Payment</button>`;
+            return `<button class="portal-btn portal-btn-download" onclick="check_payment_status('${row.name}')">Check Payment</button>`;
         } else if (isExpired || needsRenewal) {
-            return `<button class="portal-btn portal-btn-primary" onclick="initiate_renewal('${row.name}')">Renew Certificate</button>`;
+            return `<button class="portal-btn portal-btn-download" onclick="initiate_renewal('${row.name}')">Renew Certificate</button>`;
         } else {
-            return `<button class="portal-btn portal-btn-primary" onclick="initiate_renewal('${row.name}')">Renew Certificate</button>`;
+            return `<button class="portal-btn portal-btn-download" onclick="initiate_renewal('${row.name}')">Renew Certificate</button>`;
         }
     }
 
@@ -636,7 +636,7 @@ frappe.pages['student-certificate'].on_page_load = function(wrapper) {
         // Show download for valid certificates
         return `<a href="/api/method/frappe.utils.print_format.download_pdf?doctype=Assessment%20Result&name=${row.name}&format=Assessment%20Result&no_letterhead=0&letterhead=Letter%20Head%20New&_lang=en" 
                    target="_blank" 
-                   class="portal-btn portal-btn-download">
+                   class="portal-btn portal-btn-primary">
                    Download PDF
                 </a>`;
     }
