@@ -74,6 +74,7 @@ def payment_success(session_id, certificate_name):
 def check_certificate_expiry(certificate_name):
     """Check if certificate is expired and needs renewal"""
     try:
+<<<<<<< HEAD
         from frappe.utils import getdate, add_days, get_datetime
         
         certificate = frappe.get_doc("Assessment Result", certificate_name)
@@ -107,6 +108,24 @@ def check_certificate_expiry(certificate_name):
         days_until_expiry = days_until_download_expiry
         expiry_date = download_expiry_date
         
+=======
+        from frappe.utils import add_days, getdate
+
+        certificate = frappe.get_doc("Assessment Result", certificate_name)
+
+        # Core rule: expiry is always 365 days after creation date.
+        creation_date = getdate(certificate.creation)
+        expiry_date = add_days(creation_date, 365)
+        current_date = getdate()
+
+        # Expired on expiry day itself.
+        is_expired = current_date >= expiry_date
+        days_until_expiry = (expiry_date - current_date).days
+
+        # Renewal needed if expired or within 30 days.
+        needs_renewal = is_expired or days_until_expiry <= 30
+
+>>>>>>> 937ddbb (chore: update in student certificate)
         return {
             "is_expired": is_expired,
             "expiry_date": expiry_date,
@@ -116,6 +135,7 @@ def check_certificate_expiry(certificate_name):
         
     except Exception as e:
         frappe.log_error(f"Failed to check certificate expiry: {str(e)}")
+<<<<<<< HEAD
         # Even on error, try to calculate expiry from creation date as fallback
         try:
             from frappe.utils import getdate, add_days
@@ -140,6 +160,14 @@ def check_certificate_expiry(certificate_name):
                 "days_until_expiry": -1,
                 "expiry_date": None
             }
+=======
+        return {
+            "is_expired": False,
+            "needs_renewal": False,
+            "days_until_expiry": None,
+            "expiry_date": None
+        }
+>>>>>>> 937ddbb (chore: update in student certificate)
 
 @frappe.whitelist()
 def debug_certificate_access(certificate_name=None, user_email=None):
@@ -224,6 +252,7 @@ def debug_certificate_access(certificate_name=None, user_email=None):
 @frappe.whitelist()
 def get_certificates(filters=None, start=0, page_length=20):
     import json
+    from frappe.utils import add_days, get_datetime, getdate
     if isinstance(filters, str):
         filters = json.loads(filters)
     start = int(start) if start else 0
@@ -237,6 +266,10 @@ def get_certificates(filters=None, start=0, page_length=20):
 
     # Apply search filters
     if filters:
+        if filters.get("date"):
+            start_dt = get_datetime(filters["date"])
+            end_dt = add_days(start_dt, 1)
+            base_filters["creation"] = ["between", [start_dt, end_dt]]
         if filters.get("student"):
             base_filters["student"] = ["like", f"%{filters['student']}%"]
         if filters.get("program"):
@@ -321,13 +354,14 @@ def get_certificates(filters=None, start=0, page_length=20):
         "Assessment Result",
         filters=base_filters,
         fields=[
-            "name", "program", "maximum_score", "total_score", "grade", 
-            "student", "customer_name", "student_group"
+            "name", "program", "maximum_score", "total_score", "grade",
+            "student", "student_name", "customer_name", "student_group", "creation"
         ],
         order_by="modified desc",
         start=start,
         page_length=page_length
     )
+    expiry_filter = getdate(filters.get("expiry_date")) if filters and filters.get("expiry_date") else None
     
     # Add renewal status and expiry information for each certificate
     for cert in certificates:
@@ -367,5 +401,47 @@ def get_certificates(filters=None, start=0, page_length=20):
             cert["is_expired"] = False
             cert["needs_renewal"] = False
             cert["days_until_expiry"] = None
-    
+
+    if expiry_filter:
+        filtered = []
+        for cert in certificates:
+            expiry_date = cert.get("expiry_date")
+            if expiry_date and getdate(expiry_date) == expiry_filter:
+                filtered.append(cert)
+        certificates = filtered
+
     return certificates
+
+
+@frappe.whitelist()
+def download_selected_certificates(names, format_name="Assessment Result", letterhead="Letter Head New", no_letterhead=0):
+    import json
+    import io
+    import zipfile
+    from frappe.utils.print_utils import get_print
+
+    if isinstance(names, str):
+        names = json.loads(names)
+
+    if not names:
+        frappe.throw("No certificates selected.")
+
+    zip_buffer = io.BytesIO()
+    with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zip_file:
+        for name in names:
+            pdf_content = get_print(
+                doctype="Assessment Result",
+                name=name,
+                print_format=format_name,
+                as_pdf=True,
+                letterhead=letterhead,
+                no_letterhead=no_letterhead,
+            )
+            filename = f"{name}.pdf"
+            zip_file.writestr(filename, pdf_content)
+
+    zip_buffer.seek(0)
+    frappe.local.response.filename = "certificates.zip"
+    frappe.local.response.filecontent = zip_buffer.read()
+    frappe.local.response.type = "download"
+    frappe.local.response.content_type = "application/zip"
