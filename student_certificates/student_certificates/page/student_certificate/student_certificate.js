@@ -328,7 +328,7 @@ frappe.pages['student-certificate'].on_page_load = function(wrapper) {
                 <div class="filter-grid">
                     <div class="filter-field">
                         <label>Date</label>
-                        <input type="text" id="filter-date" class="form-control date-input" placeholder="YYYY-MM-DD">
+                        <div id="filter-date"></div>
                     </div>
                     <div class="filter-field">
                         <label>Certificate Number</label>
@@ -348,7 +348,7 @@ frappe.pages['student-certificate'].on_page_load = function(wrapper) {
                     </div>
                     <div class="filter-field">
                         <label>Portal Expiry Date</label>
-                        <input type="text" id="filter-expiry-date" class="form-control date-input" placeholder="YYYY-MM-DD">
+                        <div id="filter-expiry-date"></div>
                     </div>
                 </div>
                 <div class="filter-actions">
@@ -372,22 +372,24 @@ frappe.pages['student-certificate'].on_page_load = function(wrapper) {
 
     $(wrapper).find('.layout-main-section').html(page_html);
 
-    // Get filter values from inputs
-    function get_filter_values() {
-        return {
-            date: $('#filter-date').val(),
-            name: $('#filter-certificate').val(),
-            student_group: $('#filter-student-group').val(),
-            student: $('#filter-student').val(),
-            program: $('#filter-program').val(),
-            expiry_date: $('#filter-expiry-date').val()
-        };
-    }
-
     let currentPage = 0;
     const pageLength = 20;
     let selectionEnabled = false;
     const selectedCertificates = new Set();
+    let dateControl = null;
+    let expiryDateControl = null;
+
+    // Get filter values from inputs
+    function get_filter_values() {
+        return {
+            date: dateControl ? dateControl.get_value() : "",
+            name: $('#filter-certificate').val(),
+            student_group: $('#filter-student-group').val(),
+            student: $('#filter-student').val(),
+            program: $('#filter-program').val(),
+            expiry_date: expiryDateControl ? expiryDateControl.get_value() : ""
+        };
+    }
 
     // Fetch and render certificates
     function fetch_certificates(page = 0) {
