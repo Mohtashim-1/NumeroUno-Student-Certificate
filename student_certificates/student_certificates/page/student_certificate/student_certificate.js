@@ -90,6 +90,32 @@ frappe.pages['student-certificate'].on_page_load = function(wrapper) {
                 box-shadow: 0 0 0 3px rgba(255, 122, 61, 0.15);
             }
 
+            .date-input-wrap {
+                position: relative;
+                display: flex;
+                align-items: center;
+            }
+
+            .date-input-wrap .date-icon-btn {
+                position: absolute;
+                right: 8px;
+                height: 26px;
+                width: 26px;
+                border: none;
+                background: #f2f3f5;
+                border-radius: 8px;
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                cursor: pointer;
+                color: #6b7785;
+            }
+
+            .date-input-wrap .date-icon-btn:hover {
+                background: #e8eaee;
+                color: #1d2a3a;
+            }
+
             .datepicker {
                 border: none;
                 box-shadow: 0 18px 40px rgba(15, 28, 45, 0.12);
@@ -328,7 +354,17 @@ frappe.pages['student-certificate'].on_page_load = function(wrapper) {
                 <div class="filter-grid">
                     <div class="filter-field">
                         <label>Date</label>
-                        <div id="filter-date"></div>
+                        <div class="date-input-wrap">
+                            <input type="text" id="filter-date" class="form-control date-input" placeholder="YYYY-MM-DD">
+                            <button type="button" class="date-icon-btn" data-target="#filter-date" aria-label="Open calendar">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                    <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                                    <line x1="16" y1="2" x2="16" y2="6"></line>
+                                    <line x1="8" y1="2" x2="8" y2="6"></line>
+                                    <line x1="3" y1="10" x2="21" y2="10"></line>
+                                </svg>
+                            </button>
+                        </div>
                     </div>
                     <div class="filter-field">
                         <label>Certificate Number</label>
@@ -348,7 +384,17 @@ frappe.pages['student-certificate'].on_page_load = function(wrapper) {
                     </div>
                     <div class="filter-field">
                         <label>Portal Expiry Date</label>
-                        <div id="filter-expiry-date"></div>
+                        <div class="date-input-wrap">
+                            <input type="text" id="filter-expiry-date" class="form-control date-input" placeholder="YYYY-MM-DD">
+                            <button type="button" class="date-icon-btn" data-target="#filter-expiry-date" aria-label="Open calendar">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                    <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                                    <line x1="16" y1="2" x2="16" y2="6"></line>
+                                    <line x1="8" y1="2" x2="8" y2="6"></line>
+                                    <line x1="3" y1="10" x2="21" y2="10"></line>
+                                </svg>
+                            </button>
+                        </div>
                     </div>
                 </div>
                 <div class="filter-actions">
@@ -376,18 +422,24 @@ frappe.pages['student-certificate'].on_page_load = function(wrapper) {
     const pageLength = 20;
     let selectionEnabled = false;
     const selectedCertificates = new Set();
-    let dateControl = null;
-    let expiryDateControl = null;
+
+    function get_picker_value(selector) {
+        const picker = $(selector).data("datepicker");
+        if (picker && picker.selectedDates && picker.selectedDates.length) {
+            return frappe.datetime.obj_to_str(picker.selectedDates[0]);
+        }
+        return $(selector).val();
+    }
 
     // Get filter values from inputs
     function get_filter_values() {
         return {
-            date: dateControl ? dateControl.get_value() : "",
+            date: get_picker_value('#filter-date'),
             name: $('#filter-certificate').val(),
             student_group: $('#filter-student-group').val(),
             student: $('#filter-student').val(),
             program: $('#filter-program').val(),
-            expiry_date: expiryDateControl ? expiryDateControl.get_value() : ""
+            expiry_date: get_picker_value('#filter-expiry-date')
         };
     }
 
@@ -465,12 +517,8 @@ frappe.pages['student-certificate'].on_page_load = function(wrapper) {
         });
     }
 
-<<<<<<< HEAD
     // Get expiry status badge
     // Every certificate expires 365 days after creation, so there's always an expiry
-=======
-    // Get expiry status badge (always show an explicit state)
->>>>>>> 937ddbb (chore: update in student certificate)
     function get_expiry_status_badge(row) {
         const isExpired = row.is_expired || false;
         const needsRenewal = row.needs_renewal || false;
@@ -480,7 +528,6 @@ frappe.pages['student-certificate'].on_page_load = function(wrapper) {
         if (status === 'Renewed') {
             return '<span class="certificate-pill">Valid (Renewed)</span>';
         } else if (isExpired) {
-<<<<<<< HEAD
             return '<span class="badge badge-danger">Expired</span>';
         } else if (needsRenewal && daysUntilExpiry !== null && daysUntilExpiry !== undefined && daysUntilExpiry > 0) {
             return `<span class="badge badge-warning">Expires in ${daysUntilExpiry} days</span>`;
@@ -496,17 +543,6 @@ frappe.pages['student-certificate'].on_page_load = function(wrapper) {
             // Fallback: if daysUntilExpiry is null/undefined (shouldn't happen), show as expired
             // This ensures we never show "No Expiry" since every certificate has a 365-day expiry rule
             return '<span class="badge badge-danger">Expired</span>';
-=======
-            return '<span class="certificate-pill expired">Expired</span>';
-        } else if (needsRenewal && daysUntilExpiry !== null && daysUntilExpiry !== undefined && daysUntilExpiry > 0) {
-            return `<span class="certificate-pill pending">Expires in ${daysUntilExpiry} days</span>`;
-        } else if (daysUntilExpiry !== null && daysUntilExpiry !== undefined && daysUntilExpiry > 30) {
-            return `<span class="certificate-pill">Valid (${daysUntilExpiry} days)</span>`;
-        } else if (daysUntilExpiry !== null && daysUntilExpiry !== undefined && daysUntilExpiry > 0) {
-            return `<span class="certificate-pill pending">Expires in ${daysUntilExpiry} days</span>`;
-        } else if (daysUntilExpiry !== null && daysUntilExpiry !== undefined && daysUntilExpiry <= 0) {
-            return '<span class="certificate-pill expired">Expired</span>';
->>>>>>> 937ddbb (chore: update in student certificate)
         }
 
         // Fallback: if no days info, mark as expired to avoid "No Expiry"
@@ -581,7 +617,17 @@ frappe.pages['student-certificate'].on_page_load = function(wrapper) {
             dateFormat: "yyyy-mm-dd",
             autoClose: true,
             onSelect: function () {
-                $(selector).trigger("change");
+                fetch_certificates(0);
+            }
+        });
+        const picker = $(selector).data("datepicker");
+        const $icon = $(`[data-target="${selector}"]`);
+        $icon.off("click").on("click", function (e) {
+            e.preventDefault();
+            if (picker && picker.show) {
+                picker.show();
+            } else {
+                $(selector).trigger("focus");
             }
         });
     }
@@ -599,12 +645,23 @@ frappe.pages['student-certificate'].on_page_load = function(wrapper) {
     });
 
     $('#reset-filters').on('click', function() {
+        const datePicker = $('#filter-date').data("datepicker");
+        const expiryPicker = $('#filter-expiry-date').data("datepicker");
+        if (datePicker) {
+            datePicker.clear();
+        } else {
+            $('#filter-date').val('');
+        }
         $('#filter-date').val('');
         $('#filter-certificate').val('');
         $('#filter-student-group').val('');
         $('#filter-student').val('');
         $('#filter-program').val('');
-        $('#filter-expiry-date').val('');
+        if (expiryPicker) {
+            expiryPicker.clear();
+        } else {
+            $('#filter-expiry-date').val('');
+        }
         fetch_certificates(0);
     });
 

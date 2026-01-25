@@ -74,7 +74,6 @@ def payment_success(session_id, certificate_name):
 def check_certificate_expiry(certificate_name):
     """Check if certificate is expired and needs renewal"""
     try:
-<<<<<<< HEAD
         from frappe.utils import getdate, add_days, get_datetime
         
         certificate = frappe.get_doc("Assessment Result", certificate_name)
@@ -108,24 +107,6 @@ def check_certificate_expiry(certificate_name):
         days_until_expiry = days_until_download_expiry
         expiry_date = download_expiry_date
         
-=======
-        from frappe.utils import add_days, getdate
-
-        certificate = frappe.get_doc("Assessment Result", certificate_name)
-
-        # Core rule: expiry is always 365 days after creation date.
-        creation_date = getdate(certificate.creation)
-        expiry_date = add_days(creation_date, 365)
-        current_date = getdate()
-
-        # Expired on expiry day itself.
-        is_expired = current_date >= expiry_date
-        days_until_expiry = (expiry_date - current_date).days
-
-        # Renewal needed if expired or within 30 days.
-        needs_renewal = is_expired or days_until_expiry <= 30
-
->>>>>>> 937ddbb (chore: update in student certificate)
         return {
             "is_expired": is_expired,
             "expiry_date": expiry_date,
@@ -135,7 +116,6 @@ def check_certificate_expiry(certificate_name):
         
     except Exception as e:
         frappe.log_error(f"Failed to check certificate expiry: {str(e)}")
-<<<<<<< HEAD
         # Even on error, try to calculate expiry from creation date as fallback
         try:
             from frappe.utils import getdate, add_days
@@ -160,14 +140,6 @@ def check_certificate_expiry(certificate_name):
                 "days_until_expiry": -1,
                 "expiry_date": None
             }
-=======
-        return {
-            "is_expired": False,
-            "needs_renewal": False,
-            "days_until_expiry": None,
-            "expiry_date": None
-        }
->>>>>>> 937ddbb (chore: update in student certificate)
 
 @frappe.whitelist()
 def debug_certificate_access(certificate_name=None, user_email=None):
