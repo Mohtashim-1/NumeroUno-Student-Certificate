@@ -316,6 +316,14 @@ frappe.pages['student-certificate'].on_page_load = function(wrapper) {
                 font-size: 13px;
             }
 
+            .certificate-table .col-student {
+                width: 26%;
+            }
+
+            .certificate-table .col-program {
+                width: 18%;
+            }
+
             .certificate-table .table tbody tr td:first-child {
                 border-radius: 12px 0 0 12px;
             }
@@ -489,7 +497,16 @@ frappe.pages['student-certificate'].on_page_load = function(wrapper) {
     // Fetch and render certificates
     function fetch_certificates(page = 0) {
         currentPage = page;
-        $("#cert-last-refresh").text(frappe.datetime.now_time(true));
+        const uaeTime = new Date().toLocaleString("en-GB", {
+            timeZone: "Asia/Dubai",
+            hour12: true,
+            year: "numeric",
+            month: "short",
+            day: "2-digit",
+            hour: "2-digit",
+            minute: "2-digit"
+        });
+        $("#cert-last-refresh").text(`Dubai time · ${uaeTime}`);
         frappe.call({
             method: 'student_certificates.student_certificates.page.student_certificate.student_certificate.get_certificates',
             args: {
@@ -507,8 +524,8 @@ frappe.pages['student-certificate'].on_page_load = function(wrapper) {
                                     <th>Date</th>
                                     <th>Certificate Number</th>
                                     <th>Student Group</th>
-                                    <th>Candidate Name</th>
-                                    <th>Program</th>
+                                    <th class="col-student">Candidate Name</th>
+                                    <th class="col-program">Program</th>
                                     <th>Expiry Status</th>
                                     <th>Action</th>
                                 </tr>
@@ -520,8 +537,8 @@ frappe.pages['student-certificate'].on_page_load = function(wrapper) {
                                         <td>${format_date(row.creation)}</td>
                                         <td>${row.name}</td>
                                         <td>${row.student_group || '-'}</td>
-                                        <td>${row.student_name || row.student || '-'}</td>
-                                        <td>${row.program || '-'}</td>
+                                        <td class="col-student">${row.student_name || row.student || '-'}</td>
+                                        <td class="col-program">${row.program || '-'}</td>
                                         <td>${get_expiry_status_badge(row)}</td>
                                         <td>
                                             <div class="table-actions">
