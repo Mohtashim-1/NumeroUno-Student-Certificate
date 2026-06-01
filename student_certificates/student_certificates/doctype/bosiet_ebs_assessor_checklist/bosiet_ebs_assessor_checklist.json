@@ -1,0 +1,155 @@
+{
+ "actions": [],
+ "allow_import": 1,
+ "autoname": "naming_series:",
+ "creation": "2026-05-14 00:00:00.000000",
+ "doctype": "DocType",
+ "document_type": "Document",
+ "engine": "InnoDB",
+ "field_order": [
+  "naming_series",
+  "checklist_no",
+  "course",
+  "batch_no",
+  "assessment_date",
+  "location",
+  "column_break_1",
+  "assessor",
+  "status",
+  "final_result",
+  "remarks",
+  "candidate_assessment_section",
+  "candidate_assessment",
+  "assessor_details_section",
+  "assessor_details",
+  "learning_outcomes_section",
+  "learning_outcomes"
+ ],
+ "fields": [
+  {
+   "default": "BOSIET-EBS-.YYYY.-",
+   "fieldname": "naming_series",
+   "fieldtype": "Select",
+   "label": "Naming Series",
+   "options": "BOSIET-EBS-.YYYY.-",
+   "set_only_once": 1
+  },
+  {
+   "fieldname": "checklist_no",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Checklist No",
+   "read_only": 1
+  },
+  {
+   "fieldname": "course",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Course",
+   "options": "Course"
+  },
+  {
+   "fieldname": "batch_no",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Batch No",
+   "options": "Student Batch Name"
+  },
+  {
+   "default": "Today",
+   "fieldname": "assessment_date",
+   "fieldtype": "Date",
+   "in_list_view": 1,
+   "label": "Assessment Date"
+  },
+  {
+   "fieldname": "location",
+   "fieldtype": "Data",
+   "label": "Location"
+  },
+  {
+   "fieldname": "column_break_1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "assessor",
+   "fieldtype": "Link",
+   "label": "Assessor",
+   "options": "User"
+  },
+  {
+   "default": "Draft",
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Status",
+   "options": "Draft\nCompleted\nCancelled"
+  },
+  {
+   "fieldname": "final_result",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Final Result",
+   "options": "\nC\nNYC",
+   "read_only": 1
+  },
+  {
+   "fieldname": "remarks",
+   "fieldtype": "Small Text",
+   "label": "Remarks"
+  },
+  {
+   "fieldname": "candidate_assessment_section",
+   "fieldtype": "Section Break",
+   "label": "Candidate Assessment"
+  },
+  {
+   "fieldname": "candidate_assessment",
+   "fieldtype": "Table",
+   "label": "Candidate Assessment",
+   "options": "BOSIET Candidate Assessment Row"
+  },
+  {
+   "fieldname": "assessor_details_section",
+   "fieldtype": "Section Break",
+   "label": "Assessor Details"
+  },
+  {
+   "fieldname": "assessor_details",
+   "fieldtype": "Table",
+   "label": "Assessor Details",
+   "options": "BOSIET Assessor Detail"
+  },
+  {
+   "fieldname": "learning_outcomes_section",
+   "fieldtype": "Section Break",
+   "label": "Learning Outcomes"
+  },
+  {
+   "fieldname": "learning_outcomes",
+   "fieldtype": "Table",
+   "label": "Learning Outcomes",
+   "options": "BOSIET Learning Outcome Detail"
+  }
+ ],
+ "links": [],
+ "modified": "2026-05-14 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Student Certificates",
+ "name": "BOSIET EBS Assessor Checklist",
+ "naming_rule": "By \"Naming Series\" field",
+ "owner": "Administrator",
+ "permissions": [
+  {"create": 1, "delete": 1, "email": 1, "export": 1, "print": 1, "read": 1, "report": 1, "role": "System Manager", "share": 1, "write": 1},
+  {"create": 1, "email": 1, "export": 1, "print": 1, "read": 1, "report": 1, "role": "Academics User", "share": 1, "write": 1}
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "title_field": "checklist_no",
+ "track_changes": 1
+}

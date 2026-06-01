@@ -1,0 +1,27 @@
+{
+ "actions": [],
+ "creation": "2026-05-14 00:00:00.000000",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": ["unit", "section_type", "outcome_no", "description", "reference_code"],
+ "fields": [
+  {"fieldname": "unit", "fieldtype": "Select", "in_list_view": 1, "label": "Unit", "options": "\nOIS-01\nOIS-02\nOIS-03\nOIS-04"},
+  {"fieldname": "section_type", "fieldtype": "Select", "in_list_view": 1, "label": "Section Type", "options": "\nUnderstand\nPerform"},
+  {"fieldname": "outcome_no", "fieldtype": "Data", "in_list_view": 1, "label": "Outcome No"},
+  {"fieldname": "description", "fieldtype": "Small Text", "in_list_view": 1, "label": "Description"},
+  {"fieldname": "reference_code", "fieldtype": "Data", "label": "Reference Code"}
+ ],
+ "istable": 1,
+ "links": [],
+ "modified": "2026-05-14 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Student Certificates",
+ "name": "BOSIET Learning Outcome Detail",
+ "owner": "Administrator",
+ "permissions": [],
+ "quick_entry": 1,
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

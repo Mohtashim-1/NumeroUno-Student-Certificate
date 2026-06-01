@@ -1,0 +1,188 @@
+{
+ "actions": [],
+ "allow_import": 1,
+ "autoname": "naming_series:",
+ "creation": "2026-05-14 00:00:00",
+ "doctype": "DocType",
+ "document_type": "Document",
+ "engine": "InnoDB",
+ "field_order": [
+  "naming_series",
+  "template",
+  "document_no",
+  "course_code",
+  "course_name",
+  "student_group",
+  "course_date",
+  "location",
+  "column_break_1",
+  "assessor",
+  "status",
+  "remarks",
+  "candidates_section",
+  "candidates",
+  "assessment_results_section",
+  "assessment_results",
+  "assessor_signatures_section",
+  "assessor_signatures"
+ ],
+ "fields": [
+  {
+   "default": "CAC-.YYYY.-",
+   "fieldname": "naming_series",
+   "fieldtype": "Select",
+   "label": "Naming Series",
+   "options": "CAC-.YYYY.-",
+   "set_only_once": 1
+  },
+  {
+   "fieldname": "template",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Template",
+   "options": "Assessment Checklist Template",
+   "reqd": 1
+  },
+  {
+   "fetch_from": "template.document_no",
+   "fieldname": "document_no",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Document No",
+   "read_only": 1
+  },
+  {
+   "fetch_from": "template.course_code",
+   "fieldname": "course_code",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Course Code",
+   "read_only": 1
+  },
+  {
+   "fetch_from": "template.course_name",
+   "fieldname": "course_name",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Course Name",
+   "read_only": 1
+  },
+  {
+   "fieldname": "student_group",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Student Group",
+   "options": "Student Group",
+   "reqd": 1
+  },
+  {
+   "default": "Today",
+   "fieldname": "course_date",
+   "fieldtype": "Date",
+   "in_list_view": 1,
+   "label": "Course Date"
+  },
+  {
+   "fieldname": "location",
+   "fieldtype": "Link",
+   "label": "Location",
+   "options": "Room"
+  },
+  {
+   "fieldname": "column_break_1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "assessor",
+   "fieldtype": "Link",
+   "label": "Assessor",
+   "options": "Instructor"
+  },
+  {
+   "default": "Draft",
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Status",
+   "options": "Draft\nIn Progress\nCompleted\nCancelled"
+  },
+  {
+   "fieldname": "remarks",
+   "fieldtype": "Small Text",
+   "label": "Remarks"
+  },
+  {
+   "fieldname": "candidates_section",
+   "fieldtype": "Section Break",
+   "label": "Candidates"
+  },
+  {
+   "fieldname": "candidates",
+   "fieldtype": "Table",
+   "label": "Candidates",
+   "options": "Course Assessment Candidate"
+  },
+  {
+   "fieldname": "assessment_results_section",
+   "fieldtype": "Section Break",
+   "label": "Assessment Results"
+  },
+  {
+   "fieldname": "assessment_results",
+   "fieldtype": "Table",
+   "label": "Assessment Results",
+   "options": "Course Assessment Result"
+  },
+  {
+   "fieldname": "assessor_signatures_section",
+   "fieldtype": "Section Break",
+   "label": "Assessor Signatures"
+  },
+  {
+   "fieldname": "assessor_signatures",
+   "fieldtype": "Table",
+   "label": "Assessor Signatures",
+   "options": "Course Assessment Signature"
+  }
+ ],
+ "links": [],
+ "modified": "2026-05-14 13:42:29.222469",
+ "modified_by": "Administrator",
+ "module": "Student Certificates",
+ "name": "Course Assessor Checklist",
+ "naming_rule": "By \"Naming Series\" field",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Academics User",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 1
+}

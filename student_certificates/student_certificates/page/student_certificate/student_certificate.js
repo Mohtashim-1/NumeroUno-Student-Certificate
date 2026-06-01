@@ -649,6 +649,14 @@ frappe.pages['student-certificate'].on_page_load = function(wrapper) {
         if (isExpired && status !== 'Renewed') {
             return `<button class="portal-btn portal-btn-ghost" disabled>Download Expired</button>`;
         }
+
+        if (row.custom_certificate && row.custom_certificate.toLowerCase().endsWith('.pdf')) {
+            return `<a href="${encodeURI(row.custom_certificate)}"
+                       target="_blank"
+                       class="portal-btn portal-btn-primary">
+                       Download PDF
+                    </a>`;
+        }
         
         // Show download for valid certificates
         return `<a href="/api/method/frappe.utils.print_format.download_pdf?doctype=Assessment%20Result&name=${row.name}&format=Assessment%20Result&no_letterhead=0&letterhead=Letter%20Head%20New&_lang=en" 

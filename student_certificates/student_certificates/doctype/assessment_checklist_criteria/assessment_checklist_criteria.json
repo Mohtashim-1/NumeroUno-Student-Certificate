@@ -1,0 +1,29 @@
+{
+ "actions": [],
+ "creation": "2026-05-14 00:00:00.000000",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": ["sequence", "source_of_evidence", "learning_outcome", "unit_code", "module_name", "description", "required"],
+ "fields": [
+  {"fieldname": "sequence", "fieldtype": "Int", "in_list_view": 1, "label": "Sequence"},
+  {"fieldname": "source_of_evidence", "fieldtype": "Select", "in_list_view": 1, "label": "Source of Evidence", "options": "\nGD\nDO\nOD\nWA\nWritten\nPractical\nObservation\nOral"},
+  {"fieldname": "learning_outcome", "fieldtype": "Data", "in_list_view": 1, "label": "Learning Outcome"},
+  {"fieldname": "unit_code", "fieldtype": "Data", "in_list_view": 1, "label": "Unit Code"},
+  {"fieldname": "module_name", "fieldtype": "Data", "in_list_view": 1, "label": "Module Name"},
+  {"fieldname": "description", "fieldtype": "Small Text", "label": "Description"},
+  {"default": "1", "fieldname": "required", "fieldtype": "Check", "in_list_view": 1, "label": "Required"}
+ ],
+ "istable": 1,
+ "links": [],
+ "modified": "2026-05-14 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Student Certificates",
+ "name": "Assessment Checklist Criteria",
+ "owner": "Administrator",
+ "permissions": [],
+ "quick_entry": 1,
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

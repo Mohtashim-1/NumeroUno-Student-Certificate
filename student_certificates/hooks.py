@@ -124,30 +124,25 @@ app_license = "mit"
 
 doc_events = {
 	"Assessment Result": {
-		"validate": "student_certificates.document_events.set_customer_name_from_student",
+		"validate": [
+			"student_certificates.document_events.set_customer_name_from_student",
+			"student_certificates.document_events.track_portal_certificate_access",
+		],
 	}
 }
 
 # Scheduled Tasks
 # ---------------
 
-# scheduler_events = {
-# 	"all": [
-# 		"student_certificates.tasks.all"
-# 	],
-# 	"daily": [
-# 		"student_certificates.tasks.daily"
-# 	],
-# 	"hourly": [
-# 		"student_certificates.tasks.hourly"
-# 	],
-# 	"weekly": [
-# 		"student_certificates.tasks.weekly"
-# 	],
-# 	"monthly": [
-# 		"student_certificates.tasks.monthly"
-# 	],
-# }
+scheduler_events = {
+	"cron": {
+		# 8:00 PM UAE (Asia/Dubai). Server OS is Asia/Karachi → 21:00 PKT = 20:00 GST.
+		# send_daily_portal_certificate_digests_scheduled() also verifies UAE hour before sending.
+		"0 21 * * *": [
+			"student_certificates.student_certificates.notifications.portal_certificate_digest.send_daily_portal_certificate_digests_scheduled"
+		],
+	}
+}
 
 # Testing
 # -------

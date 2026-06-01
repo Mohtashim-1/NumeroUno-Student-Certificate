@@ -1,5 +1,14 @@
+import os
+
 import frappe
 import stripe
+
+
+def _normalize_customer_text(value):
+    """Normalize customer text so spacing inconsistencies do not break matching."""
+    if not value:
+        return None
+    return " ".join(str(value).split())
 
 
 
@@ -235,6 +244,7 @@ def get_certificates(filters=None, start=0, page_length=20):
         "docstatus": 1,
         "custom_show_on_portal": 1
     }
+    or_filters = []
 
     # Apply search filters
     if filters:
@@ -243,7 +253,14 @@ def get_certificates(filters=None, start=0, page_length=20):
             end_dt = add_days(start_dt, 1)
             base_filters["creation"] = ["between", [start_dt, end_dt]]
         if filters.get("student"):
-            base_filters["student"] = ["like", f"%{filters['student']}%"]
+            student_search = filters["student"].strip()
+            if student_search:
+                # Candidate Name in the UI maps to student_name in Assessment Result.
+                # Keep student as a fallback so searches can still match student IDs/links.
+                or_filters.extend([
+                    ["student_name", "like", f"%{student_search}%"],
+                    ["student", "like", f"%{student_search}%"],
+                ])
         if filters.get("program"):
             base_filters["program"] = ["like", f"%{filters['program']}%"]
         if filters.get("customer"):
@@ -259,11 +276,30 @@ def get_certificates(filters=None, start=0, page_length=20):
     # If not System Manager, apply ownership/customer filter
     if not is_sys_manager:
         customer_names = []
+
+        def append_customer_aliases(customer_docname):
+            if not customer_docname:
+                return
+
+            customer_values = frappe.db.get_value(
+                "Customer",
+                customer_docname,
+                ["name", "customer_name"],
+                as_dict=True
+            ) or {}
+
+            for raw in (
+                customer_values.get("name"),
+                customer_values.get("customer_name"),
+                _normalize_customer_text(customer_values.get("customer_name")),
+            ):
+                if raw and raw not in customer_names:
+                    customer_names.append(raw)
         
         # First, try to find Customer where owner = user
-        customer_name = frappe.db.get_value("Customer", {"owner": user}, "customer_name")
-        if customer_name:
-            customer_names.append(customer_name)
+        owned_customers = frappe.get_all("Customer", filters={"owner": user}, fields=["name"])
+        for owned_customer in owned_customers:
+            append_customer_aliases(owned_customer.get("name"))
         
         # Get user's email
         user_email = frappe.db.get_value("User", user, "email")
@@ -272,11 +308,10 @@ def get_certificates(filters=None, start=0, page_length=20):
             customers_by_email = frappe.get_all(
                 "Customer",
                 filters={"email_id": user_email},
-                fields=["customer_name"]
+                fields=["name"]
             )
             for cust in customers_by_email:
-                if cust.get("customer_name") and cust["customer_name"] not in customer_names:
-                    customer_names.append(cust["customer_name"])
+                append_customer_aliases(cust.get("name"))
             
             # Method 2: Find Contact with matching email, then get linked customers
             # Check Contact Email table (newer structure)
@@ -304,10 +339,7 @@ def get_certificates(filters=None, start=0, page_length=20):
                     fields=["link_name"]
                 )
                 for link in customer_links:
-                    # Get customer_name from Customer record
-                    link_customer_name = frappe.db.get_value("Customer", link["link_name"], "customer_name")
-                    if link_customer_name and link_customer_name not in customer_names:
-                        customer_names.append(link_customer_name)
+                    append_customer_aliases(link.get("link_name"))
         
         # Apply customer filter if we found any customers
         if customer_names:
@@ -325,9 +357,11 @@ def get_certificates(filters=None, start=0, page_length=20):
     certificates = frappe.get_all(
         "Assessment Result",
         filters=base_filters,
+        or_filters=or_filters,
         fields=[
             "name", "program", "maximum_score", "total_score", "grade",
-            "student", "student_name", "customer_name", "student_group", "creation"
+            "student", "student_name", "customer_name", "student_group", "creation",
+            "custom_certificate"
         ],
         order_by="modified desc",
         start=start,
@@ -385,6 +419,25 @@ def get_certificates(filters=None, start=0, page_length=20):
     return certificates
 
 
+def _get_uploaded_certificate_pdf(doc):
+    custom_certificate = doc.get("custom_certificate")
+    if not custom_certificate or not custom_certificate.lower().endswith(".pdf"):
+        return None, None
+
+    if custom_certificate.startswith("/private/files/"):
+        file_path = frappe.get_site_path("private", "files", os.path.basename(custom_certificate))
+    elif custom_certificate.startswith("/files/"):
+        file_path = frappe.get_site_path("public", "files", os.path.basename(custom_certificate))
+    else:
+        return None, None
+
+    if not os.path.exists(file_path):
+        return None, None
+
+    with open(file_path, "rb") as pdf_file:
+        return os.path.basename(file_path), pdf_file.read()
+
+
 @frappe.whitelist()
 def download_selected_certificates(names, format_name="Assessment Result", letterhead="Letter Head New", no_letterhead=0):
     import json
@@ -401,15 +454,20 @@ def download_selected_certificates(names, format_name="Assessment Result", lette
     zip_buffer = io.BytesIO()
     with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zip_file:
         for name in names:
-            pdf_content = get_print(
-                doctype="Assessment Result",
-                name=name,
-                print_format=format_name,
-                as_pdf=True,
-                letterhead=letterhead,
-                no_letterhead=no_letterhead,
-            )
-            filename = f"{name}.pdf"
+            doc = frappe.get_doc("Assessment Result", name)
+            filename, pdf_content = _get_uploaded_certificate_pdf(doc)
+
+            if not pdf_content:
+                pdf_content = get_print(
+                    doctype="Assessment Result",
+                    name=name,
+                    print_format=format_name,
+                    as_pdf=True,
+                    letterhead=letterhead,
+                    no_letterhead=no_letterhead,
+                )
+                filename = f"{name}.pdf"
+
             zip_file.writestr(filename, pdf_content)
 
     zip_buffer.seek(0)
