@@ -13,11 +13,17 @@
  "roles": [
   {
    "role": "System Manager"
+  },
+  {
+   "role": "Customer"
+  },
+  {
+   "role": "All"
   }
  ],
  "script": null,
  "standard": "Yes",
  "style": null,
  "system_page": 0,
- "title": "student-certificate"
+ "title": "Customer Support Portal"
 }

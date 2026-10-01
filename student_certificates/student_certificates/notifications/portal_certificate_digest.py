@@ -11,8 +11,8 @@ PORTAL_PAGE_ROUTE = "/app/student-certificate"
 PORTAL_DIGEST_EMAIL_ACCOUNT = "NUTC Certificate"
 PORTAL_DIGEST_TIMEZONE = "Asia/Dubai"  # UAE (GST, UTC+4)
 PORTAL_DIGEST_HOUR_UAE = 20  # 8:00 PM UAE
-# Server OS is Asia/Karachi (UTC+5); 21:00 PKT = 20:00 UAE — see hooks.py cron.
-PORTAL_DIGEST_CRON_SERVER = "0 21 * * *"
+# Site timezone is Asia/Dubai — Frappe cron uses site TZ, not OS (PKT). See hooks.py.
+PORTAL_DIGEST_CRON_SERVER = "0 20 * * *"
 
 
 def get_uae_now():
@@ -262,7 +262,7 @@ def build_digest_email_html(customer_name, certificates):
 		</table>
 		<p>
 			<a href="{portal_url}" style="display: inline-block; padding: 10px 16px; background-color: #e74c3c; color: #fff; text-decoration: none; border-radius: 4px;">
-				Open Certificate Portal
+				Open Customer Support Portal
 			</a>
 		</p>
 		<p style="color: #666; font-size: 12px;">Client: {frappe.utils.escape_html(customer_name)}</p>

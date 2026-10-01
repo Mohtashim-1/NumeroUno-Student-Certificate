@@ -136,9 +136,9 @@ doc_events = {
 
 scheduler_events = {
 	"cron": {
-		# 8:00 PM UAE (Asia/Dubai). Server OS is Asia/Karachi → 21:00 PKT = 20:00 GST.
+		# 8:00 PM UAE. Site timezone is Asia/Dubai, so cron hours are Dubai-local (not OS PKT).
 		# send_daily_portal_certificate_digests_scheduled() also verifies UAE hour before sending.
-		"0 21 * * *": [
+		"0 20 * * *": [
 			"student_certificates.student_certificates.notifications.portal_certificate_digest.send_daily_portal_certificate_digests_scheduled"
 		],
 	}

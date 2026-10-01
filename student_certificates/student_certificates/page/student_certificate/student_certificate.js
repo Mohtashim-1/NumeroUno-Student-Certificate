@@ -1,7 +1,7 @@
 frappe.pages['student-certificate'].on_page_load = function(wrapper) {
     let page = frappe.ui.make_app_page({
         parent: wrapper,
-        title: 'Student Certificate',
+        title: 'Customer Support Portal',
         single_column: true
     });
 
@@ -382,6 +382,125 @@ frappe.pages['student-certificate'].on_page_load = function(wrapper) {
                 padding: 18px 0;
             }
 
+            .portal-main-menu {
+                display: flex;
+                gap: 8px;
+                flex-wrap: wrap;
+                margin-bottom: 18px;
+                padding: 6px;
+                background: rgba(255, 255, 255, 0.75);
+                border: 1px solid #eceff3;
+                border-radius: 14px;
+                width: fit-content;
+                max-width: 100%;
+            }
+
+            .portal-main-menu .portal-menu-btn {
+                border: none;
+                border-radius: 10px;
+                padding: 10px 18px;
+                font-size: 13px;
+                font-weight: 700;
+                cursor: pointer;
+                background: transparent;
+                color: var(--muted);
+                transition: background 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
+            }
+
+            .portal-main-menu .portal-menu-btn.active {
+                background: var(--accent);
+                color: #fff;
+                box-shadow: 0 10px 18px rgba(255, 122, 61, 0.22);
+            }
+
+            .portal-main-menu .portal-menu-btn:not(.active):hover {
+                background: #fff1e4;
+                color: var(--ink);
+            }
+
+            .portal-view { display: none; }
+            .portal-view.active { display: block; }
+
+            .training-panel {
+                background: var(--surface);
+                border-radius: 16px;
+                box-shadow: 0 16px 36px rgba(15, 28, 45, 0.08);
+                padding: 18px;
+                margin-bottom: 18px;
+            }
+
+            .training-panel h3 {
+                font-family: "Space Grotesk", "Manrope", sans-serif;
+                font-size: 18px;
+                margin: 0 0 4px;
+            }
+
+            .training-panel .panel-sub {
+                color: var(--muted);
+                font-size: 13px;
+                margin: 0 0 14px;
+            }
+
+            .training-form-grid {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+                gap: 12px;
+                margin-bottom: 12px;
+            }
+
+            .candidate-card {
+                border: 1px dashed #d8dde5;
+                border-radius: 14px;
+                padding: 14px;
+                background: #fbfcfe;
+                margin-bottom: 12px;
+            }
+
+            .candidate-card .cand-head {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                margin-bottom: 10px;
+                font-weight: 600;
+                font-size: 13px;
+            }
+
+            .id-attach-row {
+                display: flex;
+                gap: 10px;
+                align-items: center;
+                flex-wrap: wrap;
+            }
+
+            .id-attach-row .attach-name {
+                font-size: 12px;
+                color: var(--muted);
+            }
+
+            .tdr-list {
+                margin-top: 14px;
+                display: grid;
+                gap: 10px;
+            }
+
+            .tdr-card {
+                border: 1px solid #eceff3;
+                border-radius: 12px;
+                padding: 12px 14px;
+                background: var(--surface-muted);
+                display: flex;
+                justify-content: space-between;
+                gap: 12px;
+                flex-wrap: wrap;
+                align-items: center;
+            }
+
+            .tdr-card .meta {
+                font-size: 12px;
+                color: var(--muted);
+                margin-top: 4px;
+            }
+
             @media (max-width: 768px) {
                 .certificate-portal {
                     padding: 18px;
@@ -392,8 +511,8 @@ frappe.pages['student-certificate'].on_page_load = function(wrapper) {
         <div class="certificate-portal">
             <div class="certificate-hero">
                 <div>
-                    <h2>Student Certificates</h2>
-                    <p>Track certificate status and download or renew in one place.</p>
+                    <h2>Customer Support Portal</h2>
+                    <p id="portal-hero-sub">Download certificates or submit training date requests.</p>
                 </div>
                 <div class="hero-badge">
                     <span>Last refresh</span>
@@ -401,6 +520,12 @@ frappe.pages['student-certificate'].on_page_load = function(wrapper) {
                 </div>
             </div>
 
+            <div class="portal-main-menu" role="tablist" aria-label="Portal menus">
+                <button type="button" class="portal-menu-btn active" data-portal-view="certificates" id="menu-certificates">Certificates</button>
+                <button type="button" class="portal-menu-btn" data-portal-view="training" id="menu-training">Training Request</button>
+            </div>
+
+            <div class="portal-view active" id="portal-view-certificates">
             <div class="certificate-filters">
                 <div class="filter-grid">
                     <div class="filter-field">
@@ -464,6 +589,108 @@ frappe.pages['student-certificate'].on_page_load = function(wrapper) {
             </div>
 
             <div class="certificate-table" id="certificate-table"></div>
+            </div>
+
+            <div class="portal-view" id="portal-view-training">
+            <div class="training-panel" id="training-date-panel">
+                <div style="display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;align-items:flex-start">
+                    <div>
+                        <h3>Training date requests</h3>
+                        <p class="panel-sub">Add candidates (Full Name, Emirates ID / Passport No., Date of Birth, Contact Number, Email). After CSV load, upload each ID document one by one, then submit.</p>
+                        <div id="tdr-staff-pending" class="hero-badge" style="display:none;margin-top:10px">
+                            <span>Pending requests (staff)</span>
+                            <strong id="tdr-pending-count">0</strong>
+                        </div>
+                    </div>
+                    <div style="display:flex;gap:8px;flex-wrap:wrap">
+                        <button type="button" class="portal-btn portal-btn-outline" id="tdr-tab-manual">Manual form</button>
+                        <button type="button" class="portal-btn portal-btn-primary" id="tdr-tab-csv">CSV Bulk Upload</button>
+                    </div>
+                </div>
+
+                <div class="tdr-menu" style="display:flex;gap:8px;margin:14px 0 8px;flex-wrap:wrap">
+                    <button type="button" class="portal-btn portal-btn-ghost" id="toggle-tdr-form">Request training date</button>
+                    <button type="button" class="portal-btn portal-btn-ghost" id="toggle-tdr-csv">Open CSV upload</button>
+                </div>
+
+                <div id="tdr-form" style="display:none;margin-top:8px">
+                    <div class="training-form-grid">
+                        <div class="filter-field">
+                            <label>Course</label>
+                            <div id="tdr-course-link"></div>
+                            <input type="hidden" id="tdr-course" value="">
+                        </div>
+                        <div class="filter-field">
+                            <label>Preferred date</label>
+                            <div class="date-input-wrap">
+                                <input type="text" id="tdr-preferred-date" class="form-control date-input" placeholder="YYYY-MM-DD">
+                                <button type="button" class="date-icon-btn" data-target="#tdr-preferred-date" aria-label="Open calendar">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                        <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                                        <line x1="16" y1="2" x2="16" y2="6"></line>
+                                        <line x1="8" y1="2" x2="8" y2="6"></line>
+                                        <line x1="3" y1="10" x2="21" y2="10"></line>
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="filter-field">
+                            <label>Contact name</label>
+                            <input type="text" id="tdr-contact-name" class="form-control" placeholder="Optional">
+                        </div>
+                        <div class="filter-field">
+                            <label>Contact phone</label>
+                            <input type="text" id="tdr-contact-phone" class="form-control" placeholder="Optional">
+                        </div>
+                    </div>
+                    <div class="filter-field" style="margin-bottom:12px">
+                        <label>Notes</label>
+                        <textarea id="tdr-notes" class="form-control" rows="2" placeholder="Scheduling preferences…" style="height:auto;min-height:64px"></textarea>
+                    </div>
+
+                    <div style="display:flex;justify-content:space-between;align-items:flex-end;margin:8px 0 6px;gap:8px;flex-wrap:wrap">
+                        <div>
+                            <strong style="font-size:13px">Candidates</strong>
+                            <div class="panel-sub" style="margin:2px 0 0">Select a previous student by Emirates ID / Passport, or add new.</div>
+                        </div>
+                        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+                            <select id="tdr-saved-candidates" class="form-control" style="min-width:260px;max-width:380px;height:34px" title="Previous students for this customer">
+                                <option value="">Select previous student (Emirates ID / Passport)…</option>
+                            </select>
+                            <button type="button" class="portal-btn portal-btn-outline" id="tdr-add-candidate">+ New candidate</button>
+                        </div>
+                    </div>
+                    <div id="tdr-candidates"></div>
+
+                    <div style="display:flex;gap:8px;margin-top:10px">
+                        <button type="button" class="portal-btn portal-btn-primary" id="tdr-submit">Submit request</button>
+                        <button type="button" class="portal-btn portal-btn-ghost" id="tdr-cancel">Cancel</button>
+                    </div>
+                </div>
+
+                <div id="tdr-csv-form" style="display:none;margin-top:8px">
+                    <div class="panel-sub" style="margin-bottom:12px">
+                        Load candidates from CSV into the request form. After import you will upload each candidate’s ID document one by one, then submit.
+                        CSV columns: Full Name, Emirates ID / Passport No., Date of Birth, Contact Number, Email.
+                    </div>
+                    <div style="display:flex;flex-wrap:wrap;gap:8px;margin:12px 0">
+                        <button type="button" class="portal-btn portal-btn-outline" id="tdr-csv-template">Download CSV template</button>
+                    </div>
+                    <div class="filter-field">
+                        <label>Candidates CSV *</label>
+                        <input type="file" id="tdr-csv-file" class="form-control" accept=".csv,text/csv" style="height:auto;padding:8px">
+                    </div>
+                    <div style="display:flex;gap:8px;margin-top:12px">
+                        <button type="button" class="portal-btn portal-btn-primary" id="tdr-csv-submit">Load CSV into form</button>
+                        <button type="button" class="portal-btn portal-btn-ghost" id="tdr-csv-cancel">Cancel</button>
+                    </div>
+                </div>
+
+                <div class="tdr-list" id="tdr-list">
+                    <div class="empty-state">Loading training date requests…</div>
+                </div>
+            </div>
+            </div>
         </div>
     `;
 
@@ -473,6 +700,29 @@ frappe.pages['student-certificate'].on_page_load = function(wrapper) {
     const pageLength = 20;
     let selectionEnabled = false;
     const selectedCertificates = new Set();
+    let tdrListLoaded = false;
+
+    function set_portal_view(view) {
+        const next = view === "training" ? "training" : "certificates";
+        $(".portal-menu-btn").removeClass("active");
+        $(`.portal-menu-btn[data-portal-view="${next}"]`).addClass("active");
+        $(".portal-view").removeClass("active");
+        $(`#portal-view-${next}`).addClass("active");
+        if (next === "training") {
+            $("#portal-hero-sub").text("Submit training date requests with candidate details. Use CSV to load candidates, then upload each ID on the form.");
+            if (!tdrListLoaded) {
+                fetch_tdr_list();
+                tdrListLoaded = true;
+            }
+        } else {
+            $("#portal-hero-sub").text("Track certificate status and download or renew in one place.");
+            fetch_certificates(currentPage);
+        }
+    }
+
+    $(wrapper).on("click", ".portal-menu-btn", function () {
+        set_portal_view($(this).data("portal-view"));
+    });
 
     function get_picker_value(selector) {
         const picker = $(selector).data("datepicker");
@@ -676,7 +926,7 @@ frappe.pages['student-certificate'].on_page_load = function(wrapper) {
     }
 
     // Initial load
-    fetch_certificates();
+    // Certificates load via set_portal_view("certificates") at end of page setup
 
     function init_date_picker(selector) {
         if (!$.fn.datepicker) return;
@@ -849,4 +1099,574 @@ frappe.pages['student-certificate'].on_page_load = function(wrapper) {
             }
         });
     };
+
+    // ── Training Date Negotiation (Certificate Portal) ──
+    const TDR_API = 'numerouno.numerouno.api.training_date_request';
+    let tdrCandidateSeq = 0;
+
+    function tdr_escape(s) {
+        return frappe.utils.escape_html(s || '');
+    }
+
+    function add_tdr_candidate(data = {}) {
+        tdrCandidateSeq += 1;
+        const idx = tdrCandidateSeq;
+        const html = `
+            <div class="candidate-card" data-cand="${idx}">
+                <div class="cand-head">
+                    <span>Candidate #${idx}</span>
+                    <button type="button" class="portal-btn portal-btn-ghost tdr-remove-cand" data-cand="${idx}">Remove</button>
+                </div>
+                <div class="training-form-grid">
+                    <div class="filter-field">
+                        <label>Full name (with employee ID if any) *</label>
+                        <input type="text" class="form-control cand-full-name" value="${tdr_escape(data.full_name || '')}" required>
+                    </div>
+                    <div class="filter-field">
+                        <label>Emirates ID / Passport No. *</label>
+                        <input type="text" class="form-control cand-id-number" value="${tdr_escape(data.id_number || '')}" required>
+                    </div>
+                    <div class="filter-field">
+                        <label>Date of birth *</label>
+                        <input type="date" class="form-control cand-dob" value="${tdr_escape(data.date_of_birth || '')}" required>
+                    </div>
+                    <div class="filter-field">
+                        <label>Contact number *</label>
+                        <input type="text" class="form-control cand-phone" value="${tdr_escape(data.contact_number || '')}" required>
+                    </div>
+                    <div class="filter-field">
+                        <label>Email *</label>
+                        <input type="email" class="form-control cand-email" value="${tdr_escape(data.email || '')}" required>
+                    </div>
+                </div>
+                <div class="filter-field" style="margin-top:8px">
+                    <label>ID document * (upload file for each candidate — not a link)</label>
+                    <div class="id-attach-row">
+                        <button type="button" class="portal-btn portal-btn-outline cand-upload-id" data-cand="${idx}">Upload ID</button>
+                        <input type="hidden" class="cand-id-attachment" value="${tdr_escape(data.id_attachment || '')}">
+                        <span class="attach-name cand-attach-label">${data.id_attachment ? tdr_escape(data.id_attachment.split('/').pop()) : 'No file attached'}</span>
+                    </div>
+                </div>
+            </div>`;
+        $('#tdr-candidates').append(html);
+    }
+
+    function collect_tdr_candidates() {
+        const rows = [];
+        $('#tdr-candidates .candidate-card').each(function () {
+            const $c = $(this);
+            rows.push({
+                full_name: ($c.find('.cand-full-name').val() || '').trim(),
+                id_number: ($c.find('.cand-id-number').val() || '').trim(),
+                date_of_birth: ($c.find('.cand-dob').val() || '').trim() || null,
+                contact_number: ($c.find('.cand-phone').val() || '').trim(),
+                email: ($c.find('.cand-email').val() || '').trim(),
+                id_attachment: ($c.find('.cand-id-attachment').val() || '').trim(),
+            });
+        });
+        return rows;
+    }
+
+    let tdrCourseControl = null;
+    let tdrSavedCandidates = [];
+
+    function init_tdr_course_link() {
+        const $wrap = $('#tdr-course-link');
+        if (!$wrap.length) return;
+        if (tdrCourseControl) {
+            tdrCourseControl.refresh();
+            return;
+        }
+        $wrap.empty();
+        tdrCourseControl = frappe.ui.form.make_control({
+            parent: $wrap.get(0),
+            df: {
+                fieldtype: 'Link',
+                options: 'Course',
+                fieldname: 'tdr_course',
+                placeholder: __('Search course'),
+                only_select: true,
+                get_query() {
+                    const filters = {};
+                    // Prefer active courses when the field exists
+                    return { filters };
+                },
+                change() {
+                    const val = tdrCourseControl.get_value() || '';
+                    $('#tdr-course').val(val);
+                },
+            },
+            render_input: true,
+        });
+        tdrCourseControl.refresh();
+        $wrap.find('.control-input, .frappe-control').css({ width: '100%' });
+        $wrap.find('input').addClass('form-control').attr('placeholder', 'Type to search course…');
+    }
+
+    function reset_tdr_course() {
+        $('#tdr-course').val('');
+        if (tdrCourseControl) {
+            tdrCourseControl.set_value('');
+        }
+    }
+
+    function load_tdr_saved_candidates() {
+        frappe.call({
+            method: `${TDR_API}.list_saved_candidates`,
+            callback(r) {
+                tdrSavedCandidates = r.message || [];
+                const opts = ['<option value="">Select previous student (Emirates ID / Passport)…</option>']
+                    .concat(
+                        tdrSavedCandidates.map((c, i) =>
+                            `<option value="${i}">${tdr_escape(c.label || c.full_name)}</option>`
+                        )
+                    );
+                $('#tdr-saved-candidates').html(opts.join(''));
+                // Always show — empty state still educates the user
+                $('#tdr-saved-candidates').show();
+                if (!tdrSavedCandidates.length) {
+                    $('#tdr-saved-candidates').prop('disabled', true);
+                } else {
+                    $('#tdr-saved-candidates').prop('disabled', false);
+                }
+            },
+        });
+    }
+
+    function load_tdr_courses() {
+        // Kept for compatibility; searchable Link replaces the old select.
+        init_tdr_course_link();
+        load_tdr_saved_candidates();
+    }
+
+    function render_tdr_list(rows) {
+        if (!rows || !rows.length) {
+            $('#tdr-list').html('<div class="empty-state">No training date requests yet. Use “Request training date” or “CSV Bulk Upload” above.</div>');
+            return;
+        }
+        const html = rows.map((dr) => {
+            const candNames = (dr.candidates || []).map((c) => c.full_name).filter(Boolean).join(', ');
+            const actions = [];
+            if (dr.can_confirm_proposal) {
+                actions.push(`<button type="button" class="portal-btn portal-btn-primary tdr-confirm" data-name="${tdr_escape(dr.name)}">Confirm proposed date</button>`);
+            }
+            if (dr.can_request_review) {
+                actions.push(`<button type="button" class="portal-btn portal-btn-ghost tdr-review" data-name="${tdr_escape(dr.name)}">Request another review</button>`);
+            }
+            return `
+                <div class="tdr-card">
+                    <div>
+                        <strong>${tdr_escape(dr.course_name)}</strong>
+                        <span class="certificate-pill" style="margin-left:8px">${tdr_escape(dr.status)}</span>
+                        <div class="meta">
+                            ${tdr_escape(dr.name)} · Preferred ${tdr_escape(dr.preferred_date_fmt)}
+                            ${dr.proposed_date_fmt ? ` · Proposed <strong>${tdr_escape(dr.proposed_date_fmt)}</strong>` : ''}
+                            ${dr.confirmed_date_fmt ? ` · Confirmed <strong>${tdr_escape(dr.confirmed_date_fmt)}</strong>` : ''}
+                        </div>
+                        <div class="meta">${(dr.participants || (dr.candidates || []).length || 0)} candidate(s)${candNames ? `: ${tdr_escape(candNames)}` : ''}</div>
+                        ${dr.course_schedule ? `<div class="meta">On training calendar · ${tdr_escape(dr.course_schedule)}</div>` : ''}
+                        ${dr.coordinator_notes ? `<div class="meta">NUTC note: ${tdr_escape(dr.coordinator_notes)}</div>` : ''}
+                    </div>
+                    <div style="display:flex;gap:8px;flex-wrap:wrap">${actions.join('') || (dr.is_open ? '<span class="meta">Awaiting NUTC review</span>' : '')}</div>
+                </div>`;
+        }).join('');
+        $('#tdr-list').html(html);
+    }
+
+    function fetch_tdr_list() {
+        frappe.call({
+            method: `${TDR_API}.list_my_date_requests`,
+            callback(r) {
+                const payload = r.message || {};
+                const rows = Array.isArray(payload) ? payload : (payload.requests || []);
+                const isStaff = !Array.isArray(payload) && !!payload.is_staff;
+                const pending = !Array.isArray(payload) ? payload.pending_open_count : null;
+                if (isStaff && pending !== null && pending !== undefined) {
+                    $('#tdr-staff-pending').show();
+                    $('#tdr-pending-count').text(pending);
+                } else {
+                    $('#tdr-staff-pending').hide();
+                }
+                render_tdr_list(rows);
+            },
+            error() {
+                $('#tdr-list').html('<div class="empty-state">Could not load training date requests.</div>');
+            },
+        });
+    }
+
+    function init_tdr_preferred_date() {
+        if (!$.fn.datepicker) return;
+        const lang = frappe.boot.lang || 'en';
+        ['#tdr-preferred-date'].forEach((selector) => {
+            const $el = $(selector);
+            if ($el.data('datepicker')) return;
+            $el.datepicker({
+                language: $.fn.datepicker.language[lang] ? lang : 'en',
+                dateFormat: 'yyyy-mm-dd',
+                autoClose: true,
+                minDate: new Date(),
+            });
+            const picker = $el.data('datepicker');
+            $(`[data-target="${selector}"]`).off('click').on('click', function (e) {
+                e.preventDefault();
+                if (picker && picker.show) picker.show();
+                else $el.trigger('focus');
+            });
+        });
+    }
+
+    function showManualForm() {
+        $('#tdr-csv-form').hide();
+        $('#tdr-form').show();
+        if (!$('#tdr-candidates .candidate-card').length) add_tdr_candidate();
+        init_tdr_preferred_date();
+        load_tdr_courses();
+    }
+
+    function showCsvForm() {
+        $('#tdr-form').hide();
+        $('#tdr-csv-form').show();
+        init_tdr_preferred_date();
+        load_tdr_courses();
+    }
+
+    $('#toggle-tdr-form, #tdr-tab-manual').on('click', function () {
+        if ($('#tdr-form').is(':visible') && $(this).attr('id') === 'toggle-tdr-form') {
+            $('#tdr-form').hide();
+            return;
+        }
+        showManualForm();
+    });
+
+    $('#toggle-tdr-csv, #tdr-tab-csv').on('click', function () {
+        if ($('#tdr-csv-form').is(':visible') && $(this).attr('id') === 'toggle-tdr-csv') {
+            $('#tdr-csv-form').hide();
+            return;
+        }
+        showCsvForm();
+    });
+
+    $('#tdr-cancel').on('click', function () {
+        $('#tdr-form').hide();
+    });
+
+    $('#tdr-csv-cancel').on('click', function () {
+        $('#tdr-csv-form').hide();
+    });
+
+    $('#tdr-add-candidate').on('click', function () {
+        add_tdr_candidate();
+    });
+
+    function apply_saved_candidate_to_card($card, saved) {
+        if (!$card || !$card.length || !saved) return;
+        $card.find('.cand-full-name').val(saved.full_name || '');
+        $card.find('.cand-id-number').val(saved.id_number || '');
+        $card.find('.cand-dob').val(saved.date_of_birth || '');
+        $card.find('.cand-phone').val(saved.contact_number || '');
+        $card.find('.cand-email').val(saved.email || '');
+        $card.find('.cand-id-attachment').val(saved.id_attachment || '');
+        $card.find('.cand-attach-label').text(
+            saved.id_attachment
+                ? String(saved.id_attachment).split('/').pop()
+                : 'No file attached'
+        );
+    }
+
+    function fill_from_saved(saved) {
+        if (!saved) return;
+        const payload = {
+            full_name: saved.full_name,
+            id_number: saved.id_number,
+            date_of_birth: saved.date_of_birth,
+            contact_number: saved.contact_number,
+            email: saved.email,
+            id_attachment: saved.id_attachment || '',
+        };
+        const $blank = $('#tdr-candidates .candidate-card').filter(function () {
+            return !($(this).find('.cand-full-name').val() || '').trim();
+        }).first();
+        if ($blank.length) {
+            apply_saved_candidate_to_card($blank, payload);
+        } else {
+            add_tdr_candidate(payload);
+        }
+    }
+
+    $('#tdr-saved-candidates').on('change', function () {
+        const idx = $(this).val();
+        if (idx === '' || idx == null) return;
+        const saved = tdrSavedCandidates[parseInt(idx, 10)];
+        if (!saved) return;
+        fill_from_saved(saved);
+        $(this).val('');
+        frappe.show_alert({
+            message: __('Student selected — attach ID if needed, then submit'),
+            indicator: 'blue',
+        });
+    });
+
+    // While typing Emirates ID / Passport, auto-fill if already known for this customer
+    $(wrapper).on('blur', '.cand-id-number', function () {
+        const $card = $(this).closest('.candidate-card');
+        const idVal = ($(this).val() || '').trim();
+        if (!idVal) return;
+        // Skip if name already filled (user is editing)
+        if (($card.find('.cand-full-name').val() || '').trim()) return;
+        frappe.call({
+            method: `${TDR_API}.find_candidate_by_id`,
+            args: { id_number: idVal },
+            callback(r) {
+                if (!r.message) return;
+                apply_saved_candidate_to_card($card, r.message);
+                frappe.show_alert({
+                    message: __('Matched existing student by Emirates ID / Passport'),
+                    indicator: 'green',
+                });
+            },
+        });
+    });
+
+    $(wrapper).on('click', '.tdr-remove-cand', function () {
+        const $cards = $('#tdr-candidates .candidate-card');
+        if ($cards.length <= 1) {
+            frappe.msgprint('At least one candidate is required.');
+            return;
+        }
+        $(this).closest('.candidate-card').remove();
+    });
+
+    $(wrapper).on('click', '.cand-upload-id', function () {
+        const $card = $(this).closest('.candidate-card');
+        new frappe.ui.FileUploader({
+            allow_multiple: false,
+            restrictions: {
+                allowed_file_types: ['image/*', '.pdf', 'application/pdf'],
+            },
+            on_success(file) {
+                const url = file.file_url || file.file_name;
+                $card.find('.cand-id-attachment').val(url);
+                $card.find('.cand-attach-label').text(file.file_name || url);
+                frappe.show_alert({ message: __('ID document attached'), indicator: 'green' });
+            },
+        });
+    });
+
+    $('#tdr-submit').on('click', function () {
+        const preferred = get_picker_value('#tdr-preferred-date') || $('#tdr-preferred-date').val();
+        const course = $('#tdr-course').val();
+        const candidates = collect_tdr_candidates();
+        if (!course) {
+            frappe.msgprint('Please select a course.');
+            return;
+        }
+        if (!preferred) {
+            frappe.msgprint('Please choose a preferred date.');
+            return;
+        }
+        if (!candidates.length) {
+            frappe.msgprint('Please add at least one candidate.');
+            return;
+        }
+        for (let i = 0; i < candidates.length; i++) {
+            const c = candidates[i];
+            if (!c.full_name || !c.id_number || !c.date_of_birth || !c.contact_number || !c.email) {
+                frappe.msgprint(`Candidate #${i + 1}: Full Name, Emirates ID/Passport No., Date of Birth, Contact Number and Email are required.`);
+                return;
+            }
+            if (!c.id_attachment) {
+                frappe.msgprint(`Candidate #${i + 1}: Please upload the ID document.`);
+                return;
+            }
+        }
+
+        frappe.call({
+            method: `${TDR_API}.submit_date_request`,
+            args: {
+                course,
+                preferred_date: preferred,
+                candidates: JSON.stringify(candidates),
+                customer_notes: $('#tdr-notes').val(),
+                contact_name: $('#tdr-contact-name').val(),
+                contact_phone: $('#tdr-contact-phone').val(),
+            },
+            freeze: true,
+            freeze_message: __('Submitting…'),
+            callback(r) {
+                if (r.exc) return;
+                frappe.show_alert({ message: __('Training date request submitted'), indicator: 'green' });
+                $('#tdr-form').hide();
+                $('#tdr-candidates').empty();
+                $('#tdr-notes').val('');
+                reset_tdr_course();
+                const picker = $('#tdr-preferred-date').data('datepicker');
+                if (picker) picker.clear();
+                else $('#tdr-preferred-date').val('');
+                load_tdr_saved_candidates();
+                fetch_tdr_list();
+            },
+        });
+    });
+
+    function parse_candidate_csv_text(text) {
+        const lines = String(text || "").split(/\r?\n/).filter((l) => l.trim());
+        if (lines.length < 2) {
+            throw new Error("CSV needs a header row and at least one candidate row.");
+        }
+        const split = (line) => {
+            // simple CSV split supporting quoted commas
+            const out = [];
+            let cur = "";
+            let q = false;
+            for (let i = 0; i < line.length; i++) {
+                const ch = line[i];
+                if (ch === '"') {
+                    q = !q;
+                    continue;
+                }
+                if (ch === "," && !q) {
+                    out.push(cur.trim());
+                    cur = "";
+                    continue;
+                }
+                cur += ch;
+            }
+            out.push(cur.trim());
+            return out;
+        };
+        const headers = split(lines[0]).map((h) => h.toLowerCase().replace(/\s+/g, "_").replace(/\//g, "_"));
+        const alias = {
+            name: "full_name",
+            candidate_name: "full_name",
+            emirates_id: "id_number",
+            emirates_id_passport_no: "id_number",
+            emirates_id__passport_no: "id_number",
+            passport_no: "id_number",
+            passport_number: "id_number",
+            dob: "date_of_birth",
+            phone: "contact_number",
+            mobile: "contact_number",
+        };
+        const mapped = headers.map((h) => alias[h] || h);
+        const need = ["full_name", "id_number", "date_of_birth", "contact_number", "email"];
+        const missing = need.filter((k) => !mapped.includes(k));
+        if (missing.length) {
+            throw new Error("CSV missing columns: " + missing.join(", "));
+        }
+        const rows = [];
+        for (let i = 1; i < lines.length; i++) {
+            const cols = split(lines[i]);
+            const row = {};
+            mapped.forEach((key, idx) => {
+                row[key] = (cols[idx] || "").trim();
+            });
+            if (!row.full_name) continue;
+            rows.push({
+                full_name: row.full_name,
+                id_number: row.id_number,
+                date_of_birth: row.date_of_birth,
+                contact_number: row.contact_number,
+                email: row.email,
+            });
+        }
+        if (!rows.length) {
+            throw new Error("CSV has no candidate rows.");
+        }
+        return rows;
+    }
+
+    $('#tdr-csv-template').on('click', function () {
+        frappe.call({
+            method: `${TDR_API}.get_candidate_csv_template`,
+            callback(r) {
+                const res = r.message || {};
+                const blob = new Blob([res.content || ''], { type: 'text/csv;charset=utf-8' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = res.filename || 'training_candidates_template.csv';
+                a.click();
+                URL.revokeObjectURL(url);
+            },
+        });
+    });
+
+    $('#tdr-csv-submit').on('click', function () {
+        const csvInput = document.getElementById('tdr-csv-file');
+        if (!csvInput?.files?.length) {
+            frappe.msgprint('Please choose a candidates CSV file.');
+            return;
+        }
+        const file = csvInput.files[0];
+        const reader = new FileReader();
+        reader.onload = () => {
+            try {
+                const rows = parse_candidate_csv_text(reader.result);
+                // Prefill manual form — user uploads ID one by one, then submits
+                $('#tdr-candidates').empty();
+                tdrCandidateSeq = 0;
+                rows.forEach((row) => add_tdr_candidate(row));
+                $('#tdr-csv-form').hide();
+                showManualForm();
+                csvInput.value = '';
+                frappe.msgprint({
+                    title: __('Candidates loaded'),
+                    message: __(
+                        '{0} candidate(s) loaded into the form. Please upload each candidate ID document one by one, then click Submit request.',
+                        [rows.length]
+                    ),
+                    indicator: 'blue',
+                });
+            } catch (e) {
+                frappe.msgprint({ title: __('CSV error'), message: e.message || String(e), indicator: 'red' });
+            }
+        };
+        reader.onerror = () => frappe.msgprint('Could not read CSV file.');
+        reader.readAsText(file);
+    });
+
+    $(wrapper).on('click', '.tdr-confirm', function () {
+        const name = $(this).data('name');
+        frappe.call({
+            method: `${TDR_API}.confirm_proposed_date`,
+            args: { name },
+            freeze: true,
+            callback(r) {
+                if (!r.exc) {
+                    frappe.show_alert({ message: __('Date confirmed'), indicator: 'green' });
+                    fetch_tdr_list();
+                }
+            },
+        });
+    });
+
+    $(wrapper).on('click', '.tdr-review', function () {
+        const name = $(this).data('name');
+        frappe.prompt(
+            {
+                fieldname: 'customer_notes',
+                fieldtype: 'Small Text',
+                label: __('Why do you need another date?'),
+            },
+            (values) => {
+                frappe.call({
+                    method: `${TDR_API}.request_date_review`,
+                    args: { name, customer_notes: values.customer_notes },
+                    freeze: true,
+                    callback(r) {
+                        if (!r.exc) {
+                            frappe.show_alert({ message: __('Sent back for review'), indicator: 'blue' });
+                            fetch_tdr_list();
+                        }
+                    },
+                });
+            },
+            __('Request another review'),
+            __('Send')
+        );
+    });
+
+    // Default menu: Certificates (Training Request loads on demand)
+    set_portal_view("certificates");
 };
