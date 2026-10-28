@@ -240,39 +240,53 @@ def get_certificates(filters=None, start=0, page_length=20):
     start = int(start) if start else 0
     page_length = int(page_length) if page_length else 20
 
+    from numerouno.numerouno.utils.trainer_confirmation import (
+        get_trainer_confirmation_policy_start,
+        has_trainer_confirmation_field,
+        portal_confirmation_sql,
+    )
+
     user = frappe.session.user
-    base_filters = {
-        "docstatus": 1,
-        "custom_show_on_portal": 1
-    }
-    # Hide certificates until instructor confirms (prevents early client download).
-    if frappe.get_meta("Assessment Result").has_field("custom_trainer_confirmed"):
-        base_filters["custom_trainer_confirmed"] = 1
-    or_filters = []
+    conditions = [
+        "`tabAssessment Result`.docstatus = 1",
+        "`tabAssessment Result`.custom_show_on_portal = 1",
+    ]
+    values = {}
+
+    # From 26 Oct 2026: require instructor confirmation.
+    # Through 25 Oct 2026: show without confirmation (legacy).
+    if has_trainer_confirmation_field():
+        conditions.append(portal_confirmation_sql("tabAssessment Result"))
+        values["trainer_confirm_cutoff"] = get_trainer_confirmation_policy_start()
 
     # Apply search filters
     if filters:
         if filters.get("date"):
             start_dt = get_datetime(filters["date"])
             end_dt = add_days(start_dt, 1)
-            base_filters["creation"] = ["between", [start_dt, end_dt]]
+            conditions.append("`tabAssessment Result`.creation between %(creation_start)s and %(creation_end)s")
+            values["creation_start"] = start_dt
+            values["creation_end"] = end_dt
         if filters.get("student"):
             student_search = filters["student"].strip()
             if student_search:
-                # Candidate Name in the UI maps to student_name in Assessment Result.
-                # Keep student as a fallback so searches can still match student IDs/links.
-                or_filters.extend([
-                    ["student_name", "like", f"%{student_search}%"],
-                    ["student", "like", f"%{student_search}%"],
-                ])
+                conditions.append(
+                    "(`tabAssessment Result`.student_name like %(student_search)s"
+                    " or `tabAssessment Result`.student like %(student_search)s)"
+                )
+                values["student_search"] = f"%{student_search}%"
         if filters.get("program"):
-            base_filters["program"] = ["like", f"%{filters['program']}%"]
+            conditions.append("`tabAssessment Result`.program like %(program)s")
+            values["program"] = f"%{filters['program']}%"
         if filters.get("customer"):
-            base_filters["customer_name"] = ["like", f"%{filters['customer']}%"]
+            conditions.append("`tabAssessment Result`.customer_name like %(customer)s")
+            values["customer"] = f"%{filters['customer']}%"
         if filters.get("student_group"):
-            base_filters["student_group"] = ["like", f"%{filters['student_group']}%"]
+            conditions.append("`tabAssessment Result`.student_group like %(student_group)s")
+            values["student_group"] = f"%{filters['student_group']}%"
         if filters.get("name"):
-            base_filters["name"] = ["like", f"%{filters['name']}%"]
+            conditions.append("`tabAssessment Result`.name like %(cert_name)s")
+            values["cert_name"] = f"%{filters['name']}%"
 
     # Check if user is System Manager
     is_sys_manager = "System Manager" in frappe.get_roles(user)
@@ -299,12 +313,12 @@ def get_certificates(filters=None, start=0, page_length=20):
             ):
                 if raw and raw not in customer_names:
                     customer_names.append(raw)
-        
+
         # First, try to find Customer where owner = user
         owned_customers = frappe.get_all("Customer", filters={"owner": user}, fields=["name"])
         for owned_customer in owned_customers:
             append_customer_aliases(owned_customer.get("name"))
-        
+
         # Get user's email
         user_email = frappe.db.get_value("User", user, "email")
         if user_email:
@@ -316,7 +330,7 @@ def get_certificates(filters=None, start=0, page_length=20):
             )
             for cust in customers_by_email:
                 append_customer_aliases(cust.get("name"))
-            
+
             # Method 2: Find Contact with matching email, then get linked customers
             # Check Contact Email table (newer structure)
             contact_emails = frappe.get_all(
@@ -325,12 +339,12 @@ def get_certificates(filters=None, start=0, page_length=20):
                 fields=["parent"]
             )
             contact_names = [ce["parent"] for ce in contact_emails]
-            
+
             # Also check old Contact.email_id field (if exists)
             old_contact = frappe.db.get_value("Contact", {"email_id": user_email}, "name")
             if old_contact and old_contact not in contact_names:
                 contact_names.append(old_contact)
-            
+
             # Get all customers linked to these contacts
             if contact_names:
                 customer_links = frappe.get_all(
@@ -344,32 +358,32 @@ def get_certificates(filters=None, start=0, page_length=20):
                 )
                 for link in customer_links:
                     append_customer_aliases(link.get("link_name"))
-        
+
         # Apply customer filter if we found any customers
         if customer_names:
-            if len(customer_names) == 1:
-                # Single customer - use direct match
-                base_filters["customer_name"] = customer_names[0]
-            else:
-                # Multiple customers - use IN operator
-                base_filters["customer_name"] = ["in", customer_names]
+            conditions.append("`tabAssessment Result`.customer_name in %(customer_names)s")
+            values["customer_names"] = tuple(customer_names)
         else:
             # Fallback: show certificates where user is the owner
-            base_filters["owner"] = user
+            conditions.append("`tabAssessment Result`.owner = %(owner)s")
+            values["owner"] = user
 
-    # Get basic certificate data with pagination
-    certificates = frappe.get_all(
-        "Assessment Result",
-        filters=base_filters,
-        or_filters=or_filters,
-        fields=[
-            "name", "program", "maximum_score", "total_score", "grade",
-            "student", "student_name", "customer_name", "student_group", "creation",
-            "custom_certificate"
-        ],
-        order_by="modified desc",
-        start=start,
-        page_length=page_length
+    values["limit_start"] = start
+    values["page_length"] = page_length
+
+    certificates = frappe.db.sql(
+        f"""
+        select
+            name, program, maximum_score, total_score, grade,
+            student, student_name, customer_name, student_group, creation,
+            custom_certificate
+        from `tabAssessment Result`
+        where {" and ".join(conditions)}
+        order by modified desc
+        limit %(page_length)s offset %(limit_start)s
+        """,
+        values,
+        as_dict=True,
     )
     expiry_filter = getdate(filters.get("expiry_date")) if filters and filters.get("expiry_date") else None
     
@@ -461,11 +475,9 @@ def download_selected_certificates(names, format_name="Assessment Result", lette
             doc = frappe.get_doc("Assessment Result", name)
             if not cint(doc.get("custom_show_on_portal")):
                 frappe.throw(f"Certificate {name} is not available for download.")
-            if frappe.get_meta("Assessment Result").has_field("custom_trainer_confirmed"):
-                if not cint(doc.get("custom_trainer_confirmed")):
-                    frappe.throw(
-                        f"Certificate {name} is awaiting instructor confirmation and cannot be downloaded yet."
-                    )
+            from numerouno.numerouno.utils.trainer_confirmation import assert_ready_for_client_portal
+
+            assert_ready_for_client_portal(doc)
             filename, pdf_content = _get_uploaded_certificate_pdf(doc)
 
             if not pdf_content:

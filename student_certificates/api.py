@@ -9,11 +9,9 @@ def download_certificate(name):
     if not doc.custom_show_on_portal:
         frappe.throw("Certificate not available for download.")
 
-    if frappe.get_meta("Assessment Result").has_field("custom_trainer_confirmed"):
-        if not int(doc.get("custom_trainer_confirmed") or 0):
-            frappe.throw(
-                "Certificate is awaiting instructor confirmation and cannot be downloaded yet."
-            )
+    from numerouno.numerouno.utils.trainer_confirmation import assert_ready_for_client_portal
+
+    assert_ready_for_client_portal(doc)
 
     # Use 'doc' as the key for the template context
     html = frappe.render_template("student_certificates/templates/certificate.html", {"doc": doc})

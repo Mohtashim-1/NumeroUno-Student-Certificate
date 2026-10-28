@@ -42,15 +42,19 @@ def track_portal_certificate_access(doc, method):
 
 	ensure_portal_digest_fields()
 
+	from numerouno.numerouno.utils.trainer_confirmation import requires_trainer_confirmation_for_portal
+
 	prev = doc.get_doc_before_save()
 	was_enabled = bool(prev and prev.get("custom_show_on_portal"))
 	is_enabled = bool(doc.get("custom_show_on_portal"))
 	was_confirmed = bool(prev and prev.get("custom_trainer_confirmed"))
 	is_confirmed = bool(doc.get("custom_trainer_confirmed"))
+	needs_confirm = requires_trainer_confirmation_for_portal(doc)
 
-	# Ready for client only when portal flag AND trainer confirmation are both on.
-	was_ready = was_enabled and was_confirmed
-	is_ready = is_enabled and is_confirmed
+	# Legacy (before 26 Oct 2026): Show on Portal alone is enough.
+	# From 26 Oct 2026: instructor confirmation is also required.
+	was_ready = was_enabled and (was_confirmed or not needs_confirm)
+	is_ready = is_enabled and (is_confirmed or not needs_confirm)
 
 	if is_ready and not was_ready:
 		doc.custom_portal_enabled_on = now_datetime()

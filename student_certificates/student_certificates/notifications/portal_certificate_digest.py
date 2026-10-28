@@ -189,39 +189,45 @@ def get_training_date(row):
 def get_pending_digest_certificates(since_datetime):
 	ensure_portal_digest_fields()
 
-	filters = {
-		"docstatus": 1,
-		"custom_show_on_portal": 1,
-		"custom_portal_digest_sent": 0,
-		"customer_name": ["is", "set"],
-	}
-	# Do not email clients until instructor confirms the certificate.
-	if frappe.get_meta("Assessment Result").has_field("custom_trainer_confirmed"):
-		filters["custom_trainer_confirmed"] = 1
+	from numerouno.numerouno.utils.trainer_confirmation import (
+		get_trainer_confirmation_policy_start,
+		has_trainer_confirmation_field,
+		is_ready_for_client_portal,
+		portal_confirmation_sql,
+	)
 
-	certificates = frappe.get_all(
-		"Assessment Result",
-		filters=filters,
-		fields=[
-			"name",
-			"student_name",
-			"student_group",
-			"course",
-			"program",
-			"assessment_plan",
-			"date",
-			"course_start_date",
-			"customer_name",
-			"custom_portal_enabled_on",
-			"modified",
-		],
-		order_by="customer_name asc, student_name asc",
+	conditions = [
+		"docstatus = 1",
+		"custom_show_on_portal = 1",
+		"custom_portal_digest_sent = 0",
+		"customer_name is not null",
+		"customer_name != ''",
+	]
+	values = {}
+	if has_trainer_confirmation_field():
+		conditions.append(portal_confirmation_sql())
+		values["trainer_confirm_cutoff"] = get_trainer_confirmation_policy_start()
+
+	certificates = frappe.db.sql(
+		f"""
+		select
+			name, student_name, student_group, course, program, assessment_plan,
+			date, course_start_date, customer_name, custom_portal_enabled_on,
+			modified, creation, custom_trainer_confirmed
+		from `tabAssessment Result`
+		where {" and ".join(conditions)}
+		order by customer_name asc, student_name asc
+		""",
+		values,
+		as_dict=True,
 	)
 
 	pending = []
 	since = get_datetime(since_datetime)
 
 	for row in certificates:
+		if not is_ready_for_client_portal(row):
+			continue
 		# Only notify when portal access was explicitly enabled (not legacy records).
 		enabled_on = row.get("custom_portal_enabled_on")
 		if not enabled_on:
@@ -363,30 +369,35 @@ def send_test_portal_certificate_digest(recipient=None, sample_count=3):
 
 	sample_count = max(1, min(int(sample_count or 3), 10))
 
-	sample_filters = {
-		"docstatus": 1,
-		"custom_show_on_portal": 1,
-		"customer_name": ["is", "set"],
-	}
-	if frappe.get_meta("Assessment Result").has_field("custom_trainer_confirmed"):
-		sample_filters["custom_trainer_confirmed"] = 1
+	from numerouno.numerouno.utils.trainer_confirmation import (
+		get_trainer_confirmation_policy_start,
+		has_trainer_confirmation_field,
+		portal_confirmation_sql,
+	)
 
-	samples = frappe.get_all(
-		"Assessment Result",
-		filters=sample_filters,
-		fields=[
-			"name",
-			"student_name",
-			"student_group",
-			"course",
-			"program",
-			"assessment_plan",
-			"date",
-			"course_start_date",
-			"customer_name",
-		],
-		order_by="modified desc",
-		limit=sample_count,
+	sample_conditions = [
+		"docstatus = 1",
+		"custom_show_on_portal = 1",
+		"customer_name is not null",
+		"customer_name != ''",
+	]
+	sample_values = {"sample_count": sample_count}
+	if has_trainer_confirmation_field():
+		sample_conditions.append(portal_confirmation_sql())
+		sample_values["trainer_confirm_cutoff"] = get_trainer_confirmation_policy_start()
+
+	samples = frappe.db.sql(
+		f"""
+		select
+			name, student_name, student_group, course, program, assessment_plan,
+			date, course_start_date, customer_name
+		from `tabAssessment Result`
+		where {" and ".join(sample_conditions)}
+		order by modified desc
+		limit %(sample_count)s
+		""",
+		sample_values,
+		as_dict=True,
 	)
 
 	if not samples:
