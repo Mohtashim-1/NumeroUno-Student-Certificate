@@ -195,6 +195,9 @@ def get_pending_digest_certificates(since_datetime):
 		"custom_portal_digest_sent": 0,
 		"customer_name": ["is", "set"],
 	}
+	# Do not email clients until instructor confirms the certificate.
+	if frappe.get_meta("Assessment Result").has_field("custom_trainer_confirmed"):
+		filters["custom_trainer_confirmed"] = 1
 
 	certificates = frappe.get_all(
 		"Assessment Result",
@@ -360,13 +363,17 @@ def send_test_portal_certificate_digest(recipient=None, sample_count=3):
 
 	sample_count = max(1, min(int(sample_count or 3), 10))
 
+	sample_filters = {
+		"docstatus": 1,
+		"custom_show_on_portal": 1,
+		"customer_name": ["is", "set"],
+	}
+	if frappe.get_meta("Assessment Result").has_field("custom_trainer_confirmed"):
+		sample_filters["custom_trainer_confirmed"] = 1
+
 	samples = frappe.get_all(
 		"Assessment Result",
-		filters={
-			"docstatus": 1,
-			"custom_show_on_portal": 1,
-			"customer_name": ["is", "set"],
-		},
+		filters=sample_filters,
 		fields=[
 			"name",
 			"student_name",

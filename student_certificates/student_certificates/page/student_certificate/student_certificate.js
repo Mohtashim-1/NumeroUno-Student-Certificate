@@ -635,12 +635,34 @@ frappe.pages['student-certificate'].on_page_load = function(wrapper) {
                             </div>
                         </div>
                         <div class="filter-field">
+                            <label>Preferred batch *</label>
+                            <select id="tdr-preferred-batch" class="form-control" required>
+                                <option value="">Select batch</option>
+                                <option value="Morning Batch (8:00 AM)">Morning Batch (8:00 AM)</option>
+                                <option value="Afternoon Batch (1:00 PM)">Afternoon Batch (1:00 PM)</option>
+                                <option value="Evening Batch (5:00 PM)">Evening Batch (5:00 PM)</option>
+                            </select>
+                            <div class="panel-sub" style="margin-top:4px">Required — Morning, Afternoon, or Evening</div>
+                        </div>
+                        <div class="filter-field">
                             <label>Contact name</label>
                             <input type="text" id="tdr-contact-name" class="form-control" placeholder="Optional">
                         </div>
                         <div class="filter-field">
                             <label>Contact phone</label>
                             <input type="text" id="tdr-contact-phone" class="form-control" placeholder="Optional">
+                        </div>
+                        <div class="filter-field">
+                            <label>PO Number</label>
+                            <input type="text" id="tdr-po-number" class="form-control" placeholder="Purchase order number">
+                        </div>
+                        <div class="filter-field">
+                            <label>PO Attachment</label>
+                            <div class="id-attach-row">
+                                <button type="button" class="portal-btn portal-btn-outline" id="tdr-upload-po">Upload PO</button>
+                                <input type="hidden" id="tdr-po-attachment" value="">
+                                <span class="attach-name" id="tdr-po-label">No file attached</span>
+                            </div>
                         </div>
                     </div>
                     <div class="filter-field" style="margin-bottom:12px">
@@ -1260,9 +1282,11 @@ frappe.pages['student-certificate'].on_page_load = function(wrapper) {
                         <span class="certificate-pill" style="margin-left:8px">${tdr_escape(dr.status)}</span>
                         <div class="meta">
                             ${tdr_escape(dr.name)} · Preferred ${tdr_escape(dr.preferred_date_fmt)}
+                            ${dr.preferred_batch ? ` · ${tdr_escape(dr.preferred_batch)}` : ''}
                             ${dr.proposed_date_fmt ? ` · Proposed <strong>${tdr_escape(dr.proposed_date_fmt)}</strong>` : ''}
                             ${dr.confirmed_date_fmt ? ` · Confirmed <strong>${tdr_escape(dr.confirmed_date_fmt)}</strong>` : ''}
                         </div>
+                        ${dr.po_number || dr.po_attachment ? `<div class="meta">PO ${tdr_escape(dr.po_number || '—')}${dr.po_attachment ? ` · <a href="${tdr_escape(dr.po_attachment)}" target="_blank" rel="noopener">View attachment</a>` : ''}</div>` : ''}
                         <div class="meta">${(dr.participants || (dr.candidates || []).length || 0)} candidate(s)${candNames ? `: ${tdr_escape(candNames)}` : ''}</div>
                         ${dr.course_schedule ? `<div class="meta">On training calendar · ${tdr_escape(dr.course_schedule)}</div>` : ''}
                         ${dr.coordinator_notes ? `<div class="meta">NUTC note: ${tdr_escape(dr.coordinator_notes)}</div>` : ''}
@@ -1453,8 +1477,24 @@ frappe.pages['student-certificate'].on_page_load = function(wrapper) {
         });
     });
 
+    $('#tdr-upload-po').on('click', function () {
+        new frappe.ui.FileUploader({
+            allow_multiple: false,
+            restrictions: {
+                allowed_file_types: ['image/*', '.pdf', 'application/pdf', '.doc', '.docx', '.xls', '.xlsx'],
+            },
+            on_success(file) {
+                const url = file.file_url || file.file_name;
+                $('#tdr-po-attachment').val(url);
+                $('#tdr-po-label').text(file.file_name || url);
+                frappe.show_alert({ message: __('PO attachment uploaded'), indicator: 'green' });
+            },
+        });
+    });
+
     $('#tdr-submit').on('click', function () {
         const preferred = get_picker_value('#tdr-preferred-date') || $('#tdr-preferred-date').val();
+        const batch = ($('#tdr-preferred-batch').val() || '').trim();
         const course = $('#tdr-course').val();
         const candidates = collect_tdr_candidates();
         if (!course) {
@@ -1463,6 +1503,10 @@ frappe.pages['student-certificate'].on_page_load = function(wrapper) {
         }
         if (!preferred) {
             frappe.msgprint('Please choose a preferred date.');
+            return;
+        }
+        if (!batch) {
+            frappe.msgprint('Please select a batch (Morning, Afternoon, or Evening).');
             return;
         }
         if (!candidates.length) {
@@ -1486,10 +1530,13 @@ frappe.pages['student-certificate'].on_page_load = function(wrapper) {
             args: {
                 course,
                 preferred_date: preferred,
+                preferred_batch: batch,
                 candidates: JSON.stringify(candidates),
                 customer_notes: $('#tdr-notes').val(),
                 contact_name: $('#tdr-contact-name').val(),
                 contact_phone: $('#tdr-contact-phone').val(),
+                po_number: ($('#tdr-po-number').val() || '').trim(),
+                po_attachment: ($('#tdr-po-attachment').val() || '').trim(),
             },
             freeze: true,
             freeze_message: __('Submitting…'),
@@ -1499,6 +1546,10 @@ frappe.pages['student-certificate'].on_page_load = function(wrapper) {
                 $('#tdr-form').hide();
                 $('#tdr-candidates').empty();
                 $('#tdr-notes').val('');
+                $('#tdr-preferred-batch').val('');
+                $('#tdr-po-number').val('');
+                $('#tdr-po-attachment').val('');
+                $('#tdr-po-label').text('No file attached');
                 reset_tdr_course();
                 const picker = $('#tdr-preferred-date').data('datepicker');
                 if (picker) picker.clear();

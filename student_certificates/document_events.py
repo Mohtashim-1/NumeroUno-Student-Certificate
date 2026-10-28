@@ -28,7 +28,11 @@ def set_customer_name_from_student(doc, method):
 
 
 def track_portal_certificate_access(doc, method):
-	"""Stamp when a certificate is enabled for client portal access."""
+	"""Stamp when a certificate is enabled for client portal access.
+
+	Portal visibility / digest emails also require instructor confirmation
+	(``custom_trainer_confirmed``). Enabling Show on Portal alone is not enough.
+	"""
 	if doc.doctype != "Assessment Result":
 		return
 
@@ -41,11 +45,17 @@ def track_portal_certificate_access(doc, method):
 	prev = doc.get_doc_before_save()
 	was_enabled = bool(prev and prev.get("custom_show_on_portal"))
 	is_enabled = bool(doc.get("custom_show_on_portal"))
+	was_confirmed = bool(prev and prev.get("custom_trainer_confirmed"))
+	is_confirmed = bool(doc.get("custom_trainer_confirmed"))
 
-	if is_enabled and not was_enabled:
+	# Ready for client only when portal flag AND trainer confirmation are both on.
+	was_ready = was_enabled and was_confirmed
+	is_ready = is_enabled and is_confirmed
+
+	if is_ready and not was_ready:
 		doc.custom_portal_enabled_on = now_datetime()
 		doc.custom_portal_digest_sent = 0
-	elif not is_enabled and was_enabled:
+	elif not is_ready and was_ready:
 		doc.custom_portal_enabled_on = None
 		doc.custom_portal_digest_sent = 0
 

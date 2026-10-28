@@ -2,6 +2,7 @@ import os
 
 import frappe
 import stripe
+from frappe.utils import cint
 
 
 def _normalize_customer_text(value):
@@ -244,6 +245,9 @@ def get_certificates(filters=None, start=0, page_length=20):
         "docstatus": 1,
         "custom_show_on_portal": 1
     }
+    # Hide certificates until instructor confirms (prevents early client download).
+    if frappe.get_meta("Assessment Result").has_field("custom_trainer_confirmed"):
+        base_filters["custom_trainer_confirmed"] = 1
     or_filters = []
 
     # Apply search filters
@@ -455,6 +459,13 @@ def download_selected_certificates(names, format_name="Assessment Result", lette
     with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zip_file:
         for name in names:
             doc = frappe.get_doc("Assessment Result", name)
+            if not cint(doc.get("custom_show_on_portal")):
+                frappe.throw(f"Certificate {name} is not available for download.")
+            if frappe.get_meta("Assessment Result").has_field("custom_trainer_confirmed"):
+                if not cint(doc.get("custom_trainer_confirmed")):
+                    frappe.throw(
+                        f"Certificate {name} is awaiting instructor confirmation and cannot be downloaded yet."
+                    )
             filename, pdf_content = _get_uploaded_certificate_pdf(doc)
 
             if not pdf_content:
