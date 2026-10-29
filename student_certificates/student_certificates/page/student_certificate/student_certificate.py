@@ -242,7 +242,7 @@ def get_certificates(filters=None, start=0, page_length=20):
 
     from numerouno.numerouno.utils.trainer_confirmation import (
         get_trainer_confirmation_policy_start,
-        has_trainer_confirmation_field,
+        is_portal_trainer_confirmation_enabled,
         portal_confirmation_sql,
     )
 
@@ -255,7 +255,8 @@ def get_certificates(filters=None, start=0, page_length=20):
 
     # From 26 Oct 2026: require instructor confirmation.
     # Through 25 Oct 2026: show without confirmation (legacy).
-    if has_trainer_confirmation_field():
+    # Kill-switch: PORTAL_TRAINER_CONFIRMATION_ENABLED in trainer_confirmation.py
+    if is_portal_trainer_confirmation_enabled():
         conditions.append(portal_confirmation_sql("tabAssessment Result"))
         values["trainer_confirm_cutoff"] = get_trainer_confirmation_policy_start()
 

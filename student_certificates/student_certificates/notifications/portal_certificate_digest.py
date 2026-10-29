@@ -191,7 +191,7 @@ def get_pending_digest_certificates(since_datetime):
 
 	from numerouno.numerouno.utils.trainer_confirmation import (
 		get_trainer_confirmation_policy_start,
-		has_trainer_confirmation_field,
+		is_portal_trainer_confirmation_enabled,
 		is_ready_for_client_portal,
 		portal_confirmation_sql,
 	)
@@ -204,7 +204,7 @@ def get_pending_digest_certificates(since_datetime):
 		"customer_name != ''",
 	]
 	values = {}
-	if has_trainer_confirmation_field():
+	if is_portal_trainer_confirmation_enabled():
 		conditions.append(portal_confirmation_sql())
 		values["trainer_confirm_cutoff"] = get_trainer_confirmation_policy_start()
 
@@ -371,7 +371,7 @@ def send_test_portal_certificate_digest(recipient=None, sample_count=3):
 
 	from numerouno.numerouno.utils.trainer_confirmation import (
 		get_trainer_confirmation_policy_start,
-		has_trainer_confirmation_field,
+		is_portal_trainer_confirmation_enabled,
 		portal_confirmation_sql,
 	)
 
@@ -382,7 +382,7 @@ def send_test_portal_certificate_digest(recipient=None, sample_count=3):
 		"customer_name != ''",
 	]
 	sample_values = {"sample_count": sample_count}
-	if has_trainer_confirmation_field():
+	if is_portal_trainer_confirmation_enabled():
 		sample_conditions.append(portal_confirmation_sql())
 		sample_values["trainer_confirm_cutoff"] = get_trainer_confirmation_policy_start()
 
